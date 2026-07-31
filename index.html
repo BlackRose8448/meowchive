@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meowchive</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M22 20 L32 42 Q50 32 68 42 L78 20 L70 44 Q88 58 82 78 Q70 92 50 92 Q30 92 18 78 Q12 58 30 44 Z' fill='%23b26bff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root, [data-theme="dark"]{
+    --bg:#0a0a12; --bg2:#0f0f1c; --panel:#14142380; --card:#171726; --card-hover:#1d1d30;
+    --line:#2a2a42; --accent:#b26bff; --accent2:#ff6bd6; --accent3:#6be0ff;
+    --text:#ece9f5; --text-dim:#9691b0; --green:#6fe6a0; --amber:#ffb26b; --radius:16px;
+    --shadow:0 12px 28px rgba(178,107,255,.14);
+    --orb1:rgba(178,107,255,.18); --orb2:rgba(255,107,214,.14); --orb3:rgba(107,224,255,.10);
+  }
+  [data-theme="light"]{
+    --bg:#f6f3ff; --bg2:#efeaff; --panel:#ffffffcc; --card:#ffffff; --card-hover:#faf8ff;
+    --line:#ddd5f0; --accent:#8b4dff; --accent2:#e84db8; --accent3:#1aa8d4;
+    --text:#1e1830; --text-dim:#6f6685; --green:#1a9e5c; --amber:#c77720; --radius:16px;
+    --shadow:0 12px 28px rgba(120,80,180,.12);
+    --orb1:rgba(178,107,255,.12); --orb2:rgba(255,107,214,.10); --orb3:rgba(107,224,255,.08);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); min-height:100%; transition:background .25s,color .25s; }
+  html[lang="fa"] body, html[dir="rtl"] body{ font-family:'Vazirmatn','Space Grotesk',system-ui,sans-serif; }
+  body{
+    font-family:'Space Grotesk','Poppins',system-ui,sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, var(--orb1), transparent 42%),
+      radial-gradient(circle at 88% 12%, var(--orb2), transparent 40%),
+      radial-gradient(circle at 50% 92%, var(--orb3), transparent 45%),
+      var(--bg);
+    background-size:180% 180%,180% 180%,180% 180%,auto;
+    animation:bgdrift 26s ease-in-out infinite alternate;
+    padding:20px 16px 70px; position:relative; overflow-x:hidden; min-height:100vh;
+  }
+  @keyframes bgdrift{
+    0%{background-position:0% 0%,100% 0%,50% 100%,0 0;}
+    100%{background-position:18% 14%,82% 22%,42% 78%,0 0;}
+  }
+  ::selection{ background:var(--accent); color:#0a0a12; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--accent); }
+
+  /* soft floating light orbs */
+  .orbs{ position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .orbs i{
+    position:absolute; border-radius:50%; filter:blur(28px); opacity:.55;
+    animation:orbfloat 18s ease-in-out infinite alternate;
+  }
+  .orbs i:nth-child(1){ width:160px; height:160px; background:var(--accent); top:12%; left:8%; animation-duration:22s; }
+  .orbs i:nth-child(2){ width:120px; height:120px; background:var(--accent2); top:55%; right:10%; animation-duration:19s; animation-delay:-4s; }
+  .orbs i:nth-child(3){ width:90px; height:90px; background:var(--accent3); bottom:18%; left:35%; animation-duration:24s; animation-delay:-8s; }
+  @keyframes orbfloat{
+    0%{ transform:translate(0,0) scale(1); }
+    100%{ transform:translate(18px,-22px) scale(1.08); }
+  }
+
+  .paws-layer{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+  .paws-layer .paw{
+    position:absolute; bottom:-50px; opacity:0; color:var(--accent);
+    animation:paw-float linear infinite;
+    width:22px; height:22px;
+  }
+  .paws-layer .paw svg{ width:100%; height:100%; display:block; }
+  @keyframes paw-float{
+    0%{transform:translateY(0) rotate(-8deg); opacity:0;}
+    12%{opacity:.22;}
+    88%{opacity:.12;}
+    100%{transform:translateY(-110vh) rotate(18deg); opacity:0;}
+  }
+
+  .gate{
+    position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); flex-direction:column; gap:22px; text-align:center; padding:20px;
+  }
+  .gate .gate-cat{
+    width:90px; height:90px; filter:drop-shadow(0 0 22px rgba(178,107,255,.55));
+    position:relative; z-index:2;
+  }
+  .gate .gate-cat.idle{ animation:catbounce 2.4s ease-in-out infinite; }
+  .gate-cat .eye{ transform-origin:center; animation:blink 5s ease-in-out infinite; }
+  @keyframes catbounce{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+  @keyframes blink{
+    0%,92%,100%{ transform:scaleY(1); }
+    94%,96%{ transform:scaleY(0.12); }
+  }
+  .gate-cat.drop-bounce{
+    animation: catRollIn 2.8s cubic-bezier(.19,1,.22,1) forwards;
+  }
+  @keyframes catRollIn{
+    0%{ transform:translateX(-160vw) rotate(0deg); filter:drop-shadow(0 0 8px rgba(178,107,255,.25)); }
+    70%{ transform:translateX(0) rotate(720deg); filter:drop-shadow(0 8px 16px rgba(178,107,255,.45)); }
+    82%{ transform:translateX(0) translateY(-7px) rotate(720deg) scale(1.05,.95); }
+    92%{ transform:translateX(0) translateY(2px) rotate(720deg) scale(.98,1.02); }
+    100%{ transform:translateX(0) translateY(0) rotate(720deg) scale(1); filter:drop-shadow(0 0 28px rgba(178,107,255,.65)); }
+  }
+  .meow-pop{
+    position:absolute; left:50%; top:42%; transform:translate(-50%,-50%);
+    font-weight:800; font-size:16px; color:var(--accent2);
+    text-shadow:0 0 14px rgba(255,107,214,.7), 0 0 28px rgba(178,107,255,.4);
+    pointer-events:none; opacity:0; z-index:3;
+    font-family:'Poppins','Vazirmatn',sans-serif; letter-spacing:.5px;
+  }
+  .meow-pop.show{ animation: meowPop .65s ease-out forwards; }
+  @keyframes meowPop{
+    0%{ opacity:0; transform:translate(-50%,-10%) scale(.5) rotate(-8deg); }
+    30%{ opacity:1; transform:translate(-50%,-85%) scale(1.25) rotate(4deg); }
+    100%{ opacity:0; transform:translate(-50%,-140%) scale(.85) rotate(0deg); }
+  }
+  .welcome-cat-wrap{
+    position:relative; width:120px; height:120px; margin:0 auto;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .welcome-cat-wrap .gate-cat{ width:110px; height:110px; }
+  .welcome-ripple{
+    position:absolute; left:50%; bottom:2px; width:20px; height:8px;
+    border-radius:50%; background:rgba(178,107,255,.0);
+    transform:translateX(-50%); pointer-events:none; z-index:1;
+  }
+  .welcome-ripple.burst{ animation: rippleBurst .55s ease-out forwards; }
+  @keyframes rippleBurst{
+    0%{ width:16px; height:6px; opacity:.7; background:rgba(178,107,255,.45); box-shadow:0 0 0 0 rgba(178,107,255,.35); }
+    100%{ width:120px; height:28px; opacity:0; box-shadow:0 0 24px 8px rgba(178,107,255,0); }
+  }
+  .welcome-sparks{
+    position:absolute; inset:-40px; pointer-events:none; overflow:hidden; z-index:0;
+  }
+  .welcome-sparks i{
+    position:absolute; width:4px; height:4px; border-radius:50%;
+    background:var(--accent); opacity:0;
+    box-shadow:0 0 8px var(--accent2);
+    animation: sparkFly 1.2s ease-out forwards;
+  }
+  @keyframes sparkFly{
+    0%{ opacity:0; transform:translate(0,0) scale(.4); }
+    20%{ opacity:.9; }
+    100%{ opacity:0; transform:translate(var(--sx), var(--sy)) scale(0); }
+  }
+  #welcomeScreen{
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(178,107,255,.2), transparent 55%),
+      radial-gradient(circle at 50% 45%, rgba(255,107,214,.08), transparent 40%),
+      var(--bg);
+  }
+  #welcomeScreen .welcome-title{
+    font-size:clamp(32px, 7vw, 48px);
+    background:linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), var(--accent));
+    background-size:220% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation: fadein .7s ease 1.7s both, titleShine 4s linear 2.2s infinite;
+  }
+  @keyframes titleShine{
+    0%{ background-position:0% center; }
+    100%{ background-position:220% center; }
+  }
+  #welcomeScreen .welcome-sub{ font-size:15px; letter-spacing:.2px; max-width:360px; }
+  #welcomeScreen .welcome-enter{
+    padding:14px 36px; font-size:15px;
+    box-shadow:0 8px 28px rgba(178,107,255,.35);
+    position:relative; overflow:hidden;
+  }
+  #welcomeScreen .welcome-enter::after{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.25), transparent 70%);
+    transform:translateX(-120%);
+    animation: btnSheen 2.8s ease-in-out 2.5s infinite;
+  }
+  @keyframes btnSheen{
+    0%,100%{ transform:translateX(-120%); }
+    50%{ transform:translateX(120%); }
+  }
+  #welcomeScreen .welcome-enter:hover{
+    transform:translateY(-2px) scale(1.03);
+    box-shadow:0 12px 36px rgba(178,107,255,.5);
+  }
+  /* ===== cinematic intro ===== */
+  #welcomeScreen.intro{
+    background:#05050c;
+    padding:0; gap:0;
+  }
+  .intro-canvas{
+    position:absolute; inset:0; width:100%; height:100%;
+    z-index:0; display:block;
+  }
+  .intro-vignette{
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 42%, transparent 0%, rgba(5,5,12,.55) 70%, rgba(5,5,12,.92) 100%),
+      linear-gradient(180deg, rgba(178,107,255,.07), transparent 30%, transparent 70%, rgba(255,107,214,.06));
+  }
+  .intro-stage{
+    position:relative; z-index:2;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; text-align:center; padding:24px 16px; min-height:100vh; width:100%;
+  }
+  .intro-ring{
+    position:absolute; top:42%; left:50%; width:180px; height:180px;
+    margin:-90px 0 0 -90px; border-radius:50%;
+    border:1px solid rgba(178,107,255,.25);
+    box-shadow:0 0 40px rgba(178,107,255,.12), inset 0 0 40px rgba(178,107,255,.06);
+    opacity:0; transform:scale(.4);
+    animation: ringIn 1.1s ease .15s forwards, ringSpin 18s linear 1.2s infinite;
+  }
+  .intro-ring-2{
+    width:260px; height:260px; margin:-130px 0 0 -130px;
+    border-color:rgba(255,107,214,.18);
+    animation: ringIn 1.2s ease .35s forwards, ringSpin 28s linear 1.4s infinite reverse;
+  }
+  @keyframes ringIn{
+    to{ opacity:1; transform:scale(1); }
+  }
+  @keyframes ringSpin{ to{ transform:scale(1) rotate(360deg); } }
+  #welcomeScreen.intro .welcome-cat-wrap{
+    width:130px; height:130px; z-index:3;
+  }
+  #welcomeScreen.intro .welcome-cat-wrap .gate-cat{
+    width:120px; height:120px;
+    filter:drop-shadow(0 0 24px rgba(178,107,255,.7)) drop-shadow(0 0 60px rgba(255,107,214,.35));
+  }
+  .intro-brand{ position:relative; z-index:3; max-width:560px; }
+  .intro-line{
+    width:0; height:2px; margin:0 auto 16px;
+    background:linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+    border-radius:2px;
+    animation: lineGrow .8s ease 1.5s forwards;
+  }
+  @keyframes lineGrow{ to{ width:min(220px, 50vw); } }
+  #welcomeScreen.intro .intro-title{
+    display:flex; flex-direction:column; gap:4px; align-items:center;
+    margin:0; font-size:clamp(18px, 3.5vw, 22px); font-weight:600;
+    opacity:0; animation:fadeUp .8s ease 1.55s forwards;
+  }
+  #welcomeScreen.intro .intro-title .t-word{
+    color:var(--text-dim); font-weight:500; letter-spacing:.12em; text-transform:uppercase;
+    font-size:clamp(11px, 2.2vw, 13px);
+    background:none; -webkit-text-fill-color:var(--text-dim);
+  }
+  #welcomeScreen.intro .intro-title .t-name{
+    font-family:'Poppins','Vazirmatn',sans-serif; font-weight:800;
+    font-size:clamp(40px, 10vw, 64px); letter-spacing:.02em; line-height:1.05;
+    background:linear-gradient(105deg, #c9a0ff 0%, #b26bff 25%, #ff6bd6 55%, #6be0ff 85%, #c9a0ff 100%);
+    background-size:200% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-fill-color:transparent;
+    animation: titleShine 5s linear 2s infinite;
+    filter:drop-shadow(0 0 30px rgba(178,107,255,.35));
+  }
+  #welcomeScreen.intro .intro-sub{
+    opacity:0; animation:fadeUp .8s ease 1.85s forwards;
+    color:var(--text-dim); font-size:clamp(13px, 2.8vw, 15px);
+    max-width:340px; margin:10px auto 0; line-height:1.55;
+  }
+  #welcomeScreen.intro .intro-cta{
+    opacity:0; animation:fadeUp .8s ease 2.15s forwards;
+    margin-top:10px; z-index:3;
+    border-radius:999px; padding:14px 40px; font-size:15px; font-weight:700;
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    color:#0a0a12; border:none; cursor:pointer; font-family:inherit;
+    box-shadow:0 0 0 1px rgba(255,255,255,.12), 0 12px 40px rgba(178,107,255,.4);
+    transition:transform .2s, box-shadow .2s;
+  }
+  #welcomeScreen.intro .intro-cta:hover{
+    transform:translateY(-3px) scale(1.04);
+    box-shadow:0 0 0 1px rgba(255,255,255,.2), 0 16px 48px rgba(178,107,255,.55);
+  }
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(18px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  .gate h1{
+    font-family:'Poppins','Vazirmatn',sans-serif; font-weight:800; font-size:34px; margin:0;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .gate p.sub{ color:var(--text-dim); font-size:14px; margin:0; max-width:340px; }
+  .gate-choices{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+  .gate-choice{
+    background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:14px;
+    padding:18px 26px; font-size:14px; cursor:pointer; font-family:inherit; min-width:150px;
+    display:flex; flex-direction:column; gap:6px; align-items:center; transition:all .18s;
+  }
+  .gate-choice:hover{
+    border-color:var(--accent); background:var(--card-hover); transform:translateY(-3px);
+    box-shadow:var(--shadow);
+  }
+  .gate-choice .emoji{ font-size:26px; }
+  /* cinematic role gate */
+  #roleGate{
+    background:
+      radial-gradient(circle at 20% 20%, rgba(178,107,255,.22), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(255,107,214,.16), transparent 42%),
+      radial-gradient(circle at 50% 100%, rgba(107,224,255,.08), transparent 50%),
+      var(--bg);
+    overflow:hidden;
+  }
+  #roleGate::before{
+    content:''; position:absolute; inset:-20%;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(178,107,255,.03) 60px, rgba(178,107,255,.03) 61px),
+      repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(178,107,255,.03) 60px, rgba(178,107,255,.03) 61px);
+    animation: gateGrid 28s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes gateGrid{ to{ transform:translate(-30px,-30px); } }
+  #roleGate .gate-cat{
+    width:110px; height:110px;
+    filter:drop-shadow(0 0 28px rgba(178,107,255,.65)) drop-shadow(0 0 48px rgba(255,107,214,.25));
+    animation:catbounce 2.4s ease-in-out infinite, gateCatIn .9s ease-out both;
+  }
+  @keyframes gateCatIn{
+    from{ opacity:0; transform:scale(.4) translateY(30px); }
+    to{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  #roleGate h1{
+    font-size:clamp(36px, 8vw, 52px);
+    letter-spacing:.5px;
+    animation:fadein .7s ease .15s both;
+  }
+  #roleGate .sub{
+    font-size:15px; max-width:380px; line-height:1.5;
+    animation:fadein .7s ease .3s both;
+  }
+  #roleGate .gate-choices{ animation:fadein .7s ease .45s both; gap:16px; }
+  #roleGate .gate-choice{
+    min-width:170px; padding:22px 28px; border-radius:18px;
+    background:linear-gradient(160deg, color-mix(in srgb,var(--card) 90%,var(--accent)), var(--card));
+    border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    position:relative; overflow:hidden;
+  }
+  #roleGate .gate-choice::after{
+    content:''; position:absolute; inset:0; background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.08), transparent 70%);
+    transform:translateX(-120%); transition:transform .5s ease;
+  }
+  #roleGate .gate-choice:hover::after{ transform:translateX(120%); }
+  #roleGate .gate-choice:hover{
+    transform:translateY(-6px) scale(1.03);
+    box-shadow:0 16px 40px rgba(178,107,255,.35);
+    border-color:var(--accent);
+  }
+  #roleGate .gate-choice .emoji{ font-size:34px; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
+  #roleGate .login-box{
+    animation:fadein .4s ease both;
+    background:color-mix(in srgb,var(--card) 85%,transparent);
+    border:1px solid var(--line); border-radius:16px; padding:18px;
+    backdrop-filter:blur(10px); max-width:300px;
+  }
+  .gate-glow-ring{
+    position:absolute; width:220px; height:220px; border-radius:50%;
+    border:1px solid rgba(178,107,255,.2);
+    animation:ringPulse 3.5s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes ringPulse{
+    0%,100%{ transform:scale(.85); opacity:.4; }
+    50%{ transform:scale(1.15); opacity:.15; }
+  }
+  .login-box{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px; }
+  .login-box input{
+    background:color-mix(in srgb,var(--bg) 70%,#000); border:1px solid var(--line); color:var(--text);
+    border-radius:9px; padding:11px; font-size:13px; font-family:inherit;
+  }
+  .login-box input:focus{ outline:none; border-color:var(--accent); }
+  .login-box button{
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0a0a12; border:none;
+    border-radius:9px; padding:11px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .login-box .back{ background:transparent; border:1px solid var(--line); color:var(--text-dim); }
+  .gate-error{ color:var(--amber); font-size:12px; min-height:14px; }
+  .welcome-enter{
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0a0a12; border:none;
+    border-radius:999px; padding:12px 30px; font-size:14px; font-weight:700; cursor:pointer;
+    font-family:inherit; opacity:0; animation:fadein .6s ease 2.2s forwards;
+  }
+  @keyframes fadein{ to{ opacity:1; } }
+  .welcome-title{ opacity:0; animation:fadein .7s ease 1.6s forwards; }
+  .welcome-sub{ opacity:0; animation:fadein .7s ease 1.9s forwards; }
+
+  #app{ display:none; position:relative; z-index:1; }
+  header.top{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+    margin-bottom:22px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .cat-logo{
+    width:46px; height:46px; flex-shrink:0;
+    filter:drop-shadow(0 0 10px rgba(178,107,255,.5));
+  }
+  .cat-logo .eye{ transform-origin:center; animation:blink 5.5s ease-in-out infinite; }
+  .brand h1{
+    margin:0; font-family:'Poppins','Vazirmatn',sans-serif; font-weight:800; font-size:26px; letter-spacing:.3px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .brand .tagline{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .brand .underline{
+    width:42px; height:3px; margin-top:6px; border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    opacity:.85;
+  }
+  .mode-area{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .icon-chip{
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    border-radius:999px; padding:8px 12px; font-size:12px; cursor:pointer; font-family:inherit;
+    transition:all .15s;
+  }
+  .icon-chip:hover{ border-color:var(--accent); color:var(--accent); }
+  .mode-badge{
+    font-size:11px; padding:6px 12px; border-radius:999px; font-weight:600;
+    display:flex; align-items:center; gap:5px;
+  }
+  .mode-badge.viewer{ background:color-mix(in srgb,var(--text-dim) 12%,transparent); color:var(--text-dim); border:1px solid var(--line); }
+  .mode-badge.admin{ background:color-mix(in srgb,var(--green) 12%,transparent); color:var(--green); border:1px solid var(--green); }
+  .admin-btn{
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    border-radius:999px; padding:8px 14px; font-size:12px; cursor:pointer; font-family:inherit; transition:all .15s;
+  }
+  .admin-btn:hover{ border-color:var(--accent); color:var(--accent); }
+
+  nav.tabs{
+    display:flex; gap:7px; overflow-x:auto; padding-bottom:6px; margin-bottom:14px;
+  }
+  nav.tabs button{
+    flex:0 0 auto; background:var(--panel); backdrop-filter:blur(6px); border:1px solid var(--line);
+    color:var(--text-dim); padding:9px 15px; border-radius:999px; font-size:13px; cursor:pointer;
+    font-family:inherit; white-space:nowrap; transition:all .15s;
+  }
+  nav.tabs button.active{
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0a0a12;
+    border-color:transparent; font-weight:700; box-shadow:0 0 16px rgba(178,107,255,.35);
+  }
+  nav.tabs button:hover:not(.active){ border-color:var(--accent); color:var(--text); }
+  nav.tabs button .tab-ico{
+    display:inline-block; transition:transform .18s ease, filter .18s ease;
+    margin-inline-end:4px;
+  }
+  nav.tabs button:hover .tab-ico{ transform:translateY(-2px) scale(1.18); }
+  nav.tabs button[data-key="tricks"]:hover .tab-ico{
+    filter:drop-shadow(0 0 6px #ffd76b) drop-shadow(0 0 10px #ffb84d);
+    transform:translateY(-2px) scale(1.22) rotate(-6deg);
+  }
+  nav.tabs button[data-key="ai_image"]:hover .tab-ico{ transform:translateY(-2px) scale(1.2) rotate(8deg); }
+  nav.tabs button[data-key="ai_video"]:hover .tab-ico{ transform:translateY(-2px) scale(1.15); }
+  nav.tabs button[data-key="prompts"]:hover .tab-ico{ transform:translateY(-3px) scale(1.18) rotate(-4deg); }
+  nav.tabs button[data-key="sites"]:hover .tab-ico{ transform:translateY(-2px) scale(1.15) rotate(10deg); }
+  nav.tabs button[data-key="extensions"]:hover .tab-ico{ transform:translateY(-2px) scale(1.15) rotate(-8deg); }
+  nav.tabs button[data-key="ai_code"]:hover .tab-ico{ transform:translateY(-2px) scale(1.12); }
+  nav.tabs button[data-key="ai_other"]:hover .tab-ico{ transform:translateY(-2px) scale(1.15) rotate(5deg); }
+
+  .watch-eye{
+    display:inline-flex; align-items:center; justify-content:center; gap:3px;
+    vertical-align:middle; margin-inline-end:4px;
+  }
+  .watch-eye .ball{
+    width:11px; height:11px; border-radius:50%;
+    background:#fff; border:1.5px solid color-mix(in srgb,var(--text) 35%,transparent);
+    position:relative; overflow:hidden; display:inline-block;
+  }
+  .watch-eye .pupil{
+    position:absolute; width:5px; height:5px; border-radius:50%; background:#1a1028;
+    top:50%; left:50%; transform:translate(-50%,-50%);
+    transition:transform .05s linear;
+  }
+  [data-theme="light"] .watch-eye .pupil{ background:#2a1a40; }
+
+  .empty-paw{
+    display:inline-block; width:36px; height:36px; color:var(--accent); opacity:.85;
+    margin-bottom:10px;
+  }
+  .empty-paw svg{ width:100%; height:100%; display:block; filter:drop-shadow(0 0 8px rgba(178,107,255,.35)); }
+  .subtabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .subtabs button{
+    background:var(--card); border:1px solid var(--line); color:var(--text-dim);
+    padding:6px 16px; border-radius:8px; font-size:12.5px; cursor:pointer; font-family:inherit;
+  }
+  .subtabs button.active{ background:var(--accent); color:#0a0a12; border-color:var(--accent); font-weight:700; }
+
+  .toolbar{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;
+  }
+  .toolbar-left{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .searchbox{
+    background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:8px 12px; font-size:13px; font-family:inherit; min-width:170px;
+  }
+  .searchbox:focus{ outline:none; border-color:var(--accent); }
+  select.sortsel{
+    background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:8px;
+    padding:8px 10px; font-size:12px; font-family:inherit;
+  }
+  .count{ font-size:12px; color:var(--text-dim); }
+  .btn-add{
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0a0a12; border:none;
+    border-radius:10px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .btn-add:hover{ filter:brightness(1.08); }
+
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:15px; position:relative; display:flex; flex-direction:column; gap:9px;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    animation:cardin .35s ease both;
+  }
+  @keyframes cardin{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+  .card:hover{
+    background:var(--card-hover);
+    border-color:color-mix(in srgb,var(--accent) 45%,var(--line));
+    box-shadow:var(--shadow);
+    transform:translateY(-3px);
+  }
+  .card .badge{
+    position:absolute; top:13px; inset-inline-start:13px; font-size:10px; padding:2px 9px;
+    border-radius:999px; font-weight:700;
+  }
+  .card .badge.free{ background:color-mix(in srgb,var(--green) 15%,transparent); color:var(--green); border:1px solid var(--green); }
+  .card .badge.paid{ background:color-mix(in srgb,var(--amber) 15%,transparent); color:var(--amber); border:1px solid var(--amber); }
+  .card .badge.neutral{ background:color-mix(in srgb,var(--accent) 15%,transparent); color:var(--accent); border:1px solid var(--accent); }
+  .card h3{ margin:0; font-size:15.5px; color:var(--text); padding-inline-start:52px; font-weight:700; }
+  .links-list{ display:flex; flex-direction:column; gap:3px; }
+  .card a.link{ color:var(--accent3); font-size:12px; text-decoration:none; word-break:break-all; }
+  .card a.link:hover{ text-decoration:underline; }
+  .card p.note{ margin:0; font-size:13px; color:var(--text-dim); line-height:1.6; white-space:pre-wrap; }
+  .card img.sample{
+    width:100%; border-radius:10px; margin-top:2px; max-height:170px; object-fit:cover; border:1px solid var(--line);
+  }
+  .tested-badge{ font-size:11px; font-weight:700; align-self:flex-start; padding:2px 9px; border-radius:999px; }
+  .tested-badge.tested{ background:color-mix(in srgb,var(--green) 14%,transparent); color:var(--green); border:1px solid var(--green); }
+  .tested-badge.untested{ background:color-mix(in srgb,var(--text-dim) 10%,transparent); color:var(--text-dim); border:1px solid var(--line); }
+  .prompts-list{ display:flex; flex-direction:column; gap:8px; }
+  .promptbox{
+    background:color-mix(in srgb,var(--bg) 80%,#000); border:1px dashed var(--line); border-radius:10px;
+    padding:10px 36px 10px 10px; position:relative; cursor:pointer; transition:border-color .15s;
+  }
+  html[dir="rtl"] .promptbox{ padding:10px 10px 10px 36px; }
+  .promptbox:hover{ border-color:var(--accent); }
+  .promptbox-label{ font-size:11px; color:var(--accent); font-weight:700; margin-bottom:4px; }
+  .promptbox-text{ font-size:12.5px; color:var(--text); white-space:pre-wrap; line-height:1.6; max-height:140px; overflow:auto; }
+  .promptbox .copy-btn{
+    position:absolute; top:8px; inset-inline-end:8px; background:var(--panel); border:1px solid var(--line);
+    border-radius:7px; width:27px; height:27px; cursor:pointer; font-size:13px; color:var(--accent);
+  }
+  .promptbox .copy-btn:hover{ border-color:var(--accent); }
+  .stars{ direction:ltr; display:inline-flex; gap:2px; }
+  .stars.editable{ cursor:pointer; }
+  .stars span{ font-size:16px; color:var(--line); }
+  .stars span.on{ color:var(--accent2); }
+  .card-footer{ display:flex; justify-content:space-between; align-items:center; margin-top:auto; padding-top:6px; }
+  .vote-row{ display:flex; gap:8px; }
+  .vote-btn{
+    background:#0d0d17; border:1px solid var(--line); color:var(--text-dim); border-radius:8px;
+    padding:5px 10px; font-size:12px; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:4px;
+  }
+  [data-theme="light"] .vote-btn{ background:#f3f0ff; }
+  .vote-btn:hover{ border-color:var(--accent); }
+  .vote-btn.on-up{ background:rgba(111,230,160,.15); color:var(--green); border-color:var(--green); }
+  .vote-btn.on-down{ background:rgba(255,107,107,.15); color:#ff8080; border-color:#ff8080; }
+  .card-actions button{
+    background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px;
+    font-family:inherit; padding:2px 6px;
+  }
+  .card-actions button:hover{ color:var(--accent2); }
+  .empty{
+    color:var(--text-dim); font-size:13px; padding:44px 10px; text-align:center;
+    border:1px dashed var(--line); border-radius:var(--radius); position:relative; z-index:1;
+  }
+  .empty .paw{ font-size:30px; display:block; margin-bottom:8px; opacity:.7; }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(5,5,10,.75); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center; padding:16px; z-index:150;
+  }
+  [data-theme="light"] .overlay{ background:rgba(30,24,48,.45); }
+  .modal{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px; width:100%; max-width:440px; display:flex; flex-direction:column; gap:11px;
+    max-height:90vh; overflow:auto;
+  }
+  .modal h2{
+    margin:0 0 4px; font-size:17px; font-family:'Poppins','Vazirmatn',sans-serif;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .modal label{ font-size:12px; color:var(--text-dim); display:flex; flex-direction:column; gap:5px; font-weight:500; }
+  .modal input, .modal textarea, .modal select{
+    background:color-mix(in srgb,var(--bg) 85%,#000); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:9px; font-size:13px; font-family:inherit; resize:vertical;
+  }
+  .modal input:focus, .modal textarea:focus, .modal select:focus{ outline:none; border-color:var(--accent); }
+  .modal .ratepick{ display:flex; gap:4px; cursor:pointer; direction:ltr; }
+  .modal .ratepick span{ font-size:23px; color:var(--line); }
+  .modal .ratepick span.on{ color:var(--accent2); }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+  .modal-actions button{
+    border-radius:8px; padding:9px 15px; font-size:13px; cursor:pointer; font-family:inherit;
+    border:1px solid var(--line); background:transparent; color:var(--text-dim);
+  }
+  .modal-actions button.save{
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0a0a12;
+    border-color:transparent; font-weight:700;
+  }
+  .linkrow{ display:flex; gap:6px; align-items:center; }
+  .linkrow input{ flex:1; }
+  .linkrow > button{
+    background:color-mix(in srgb,var(--bg) 85%,#000); border:1px solid var(--line); color:var(--text-dim);
+    border-radius:7px; width:30px; height:32px; cursor:pointer; font-size:14px; flex-shrink:0;
+  }
+  .linkrow > button:hover{ color:var(--amber); border-color:var(--amber); }
+  .add-link-btn{
+    background:transparent; border:1px dashed var(--line); color:var(--accent); border-radius:8px;
+    padding:7px; font-size:12px; cursor:pointer; font-family:inherit; align-self:flex-start;
+  }
+  .add-link-btn:hover{ border-color:var(--accent); }
+  .add-link-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .promptrow{ border:1px solid var(--line); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; }
+  .tested-toggle{ display:flex; gap:8px; }
+  .tested-toggle button{
+    flex:1; background:color-mix(in srgb,var(--bg) 85%,#000); border:1px solid var(--line);
+    color:var(--text-dim); border-radius:8px; padding:9px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .tested-toggle button.on{ background:var(--green); color:#0a0a12; border-color:var(--green); font-weight:700; }
+  .hint{ font-size:11px; color:var(--text-dim); font-weight:400; }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0a0a12;
+    padding:9px 18px; border-radius:999px; font-size:12.5px; font-weight:700;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:250;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{ animation:none!important; transition:none!important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orbs" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="paws-layer" id="pawsLayer"></div>
+
+<!-- STEP 1: role gate -->
+<div class="gate" id="roleGate" style="display:none;">
+  <div class="gate-glow-ring" style="top:18%;left:50%;margin-left:-110px;"></div>
+  <div class="gate-glow-ring" style="top:22%;left:50%;margin-left:-110px;animation-delay:1.2s;width:280px;height:280px;margin-left:-140px;"></div>
+  <svg class="gate-cat" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22 20 L32 42 Q50 32 68 42 L78 20 L70 44 Q88 58 82 78 Q70 92 50 92 Q30 92 18 78 Q12 58 30 44 Z" fill="url(#g1)"/>
+    <circle class="eye" cx="38" cy="62" r="4.5" fill="#0a0a12"/><circle class="eye" cx="62" cy="62" r="4.5" fill="#0a0a12"/>
+    <path d="M46 72 Q50 76 54 72" stroke="#0a0a12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b26bff"/><stop offset="1" stop-color="#ff6bd6"/></linearGradient></defs>
+  </svg>
+  <h1>Meowchive</h1>
+  <p class="sub" id="gateSub" data-i18n="gateSub">Who's prowling in today?</p>
+  <div class="gate-choices" id="gateChoices">
+    <button class="gate-choice" id="chooseViewer"><span class="emoji">👀</span><span data-i18n="browse">Just browsing</span></button>
+    <button class="gate-choice" id="chooseAdmin"><span class="emoji">🐈‍⬛</span><span data-i18n="imAdmin">I'm the admin</span></button>
+  </div>
+  <form class="login-box" id="loginBox" style="display:none;" autocomplete="on">
+    <input type="email" id="loginEmail" name="username" data-i18n-placeholder="adminEmail" placeholder="Admin email" autocomplete="username">
+    <input type="password" id="loginPass" name="password" data-i18n-placeholder="password" placeholder="Password" autocomplete="current-password">
+    <div class="gate-error" id="loginError"></div>
+    <button type="submit" id="loginSubmit" data-i18n="unlock">Unlock admin mode</button>
+    <button type="button" class="back" id="loginBack" data-i18n="back">← Back</button>
+  </form>
+</div>
+
+<!-- STEP 2: cinematic welcome -->
+<div class="gate intro" id="welcomeScreen">
+  <canvas id="introCanvas" class="intro-canvas"></canvas>
+  <div class="intro-vignette"></div>
+  <div class="intro-stage">
+    <div class="intro-ring" id="introRing"></div>
+    <div class="intro-ring intro-ring-2"></div>
+    <div class="welcome-cat-wrap" id="introCatWrap">
+      <div class="welcome-sparks" id="welcomeSparks"></div>
+      <span class="meow-pop" id="meowPop">meow</span>
+      <svg class="gate-cat" id="welcomeCat" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 20 L32 42 Q50 32 68 42 L78 20 L70 44 Q88 58 82 78 Q70 92 50 92 Q30 92 18 78 Q12 58 30 44 Z" fill="url(#g2)"/>
+        <circle class="eye" cx="38" cy="62" r="4.5" fill="#0a0a12"/><circle class="eye" cx="62" cy="62" r="4.5" fill="#0a0a12"/>
+        <path d="M46 72 Q50 76 54 72" stroke="#0a0a12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b26bff"/><stop offset="1" stop-color="#ff6bd6"/></linearGradient></defs>
+      </svg>
+      <div class="welcome-ripple" id="welcomeRipple"></div>
+    </div>
+    <div class="intro-brand">
+      <div class="intro-line" id="introLine"></div>
+      <h1 class="welcome-title intro-title" id="introTitle">
+        <span class="t-word" data-i18n="welcome">Welcome to</span>
+        <span class="t-name">Meowchive</span>
+      </h1>
+      <p class="sub welcome-sub intro-sub" id="welcomeSub" data-i18n="tagline">the shared lair for AI tools, prompts &amp; tricks</p>
+    </div>
+    <button class="welcome-enter intro-cta" id="enterSite" data-i18n="enter">Enter the lair →</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <svg class="cat-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 20 L32 42 Q50 32 68 42 L78 20 L70 44 Q88 58 82 78 Q70 92 50 92 Q30 92 18 78 Q12 58 30 44 Z" fill="url(#g3)"/>
+        <circle class="eye" cx="38" cy="62" r="4.5" fill="#0a0a12"/><circle class="eye" cx="62" cy="62" r="4.5" fill="#0a0a12"/>
+        <path d="M46 72 Q50 76 54 72" stroke="#0a0a12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b26bff"/><stop offset="1" stop-color="#ff6bd6"/></linearGradient></defs>
+      </svg>
+      <div>
+        <h1>Meowchive</h1>
+        <div class="tagline" data-i18n="tagline">the shared lair for AI tools, prompts &amp; tricks</div>
+        <div class="underline" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="mode-area">
+      <button class="icon-chip" id="langBtn" type="button">FA</button>
+      <button class="icon-chip" id="themeBtn" type="button">☀</button>
+      <button class="admin-btn" id="suggestBtn" type="button">💡 Suggest</button>
+      <button class="admin-btn" id="inboxBtn" type="button" style="display:none;">📥 Inbox</button>
+      <span class="mode-badge viewer" id="modeBadge">👀 Viewer mode</span>
+      <button class="admin-btn" id="switchBtn" data-i18n="switch">Switch account</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="mainTabs"></nav>
+  <div class="subtabs" id="subTabs" style="display:none;"></div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input class="searchbox" id="searchBox" data-i18n-placeholder="search" placeholder="Search this sheet...">
+      <select class="sortsel" id="sortSel">
+        <option value="rating" data-i18n="topRated">Top rated</option>
+        <option value="low" data-i18n="lowRated">Lowest rated</option>
+        <option value="new" data-i18n="newest">Newest</option>
+        <option value="az">A–Z</option>
+        <option value="tested" data-i18n="filterTested">Tested</option>
+        <option value="free" data-i18n="filterFree">Free</option>
+        <option value="paid" data-i18n="filterPaid">Paid</option>
+      </select>
+      <span class="count" id="countLabel"></span>
+    </div>
+    <button class="btn-add" id="addBtn" style="display:none;" data-i18n="addItem">+ Add item</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyMsg" style="display:none;"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   SUPABASE SETUP — fill these in before deploying.
+   1) Create a project at https://supabase.com
+   2) Table editor > New table > name it "meowchive_data" with columns:
+        id  (int8, primary key, default 1)
+        items (jsonb, default [])
+      Insert one row with id = 1 (leave items as [])
+   3) Database > Replication > enable Realtime for "meowchive_data"
+   4) Authentication > Providers > make sure Email is enabled
+   5) Authentication > Users > Add user (this becomes your admin login)
+   6) Authentication > Policies (on meowchive_data) > add:
+        - SELECT: using (true)                     -- public read
+        - INSERT/UPDATE/DELETE: using (auth.uid() is not null)  -- signed-in only
+   7) Project Settings > API > copy the Project URL and anon public key below
+
+   NEW — for voting + suggestions:
+   8) Table editor > New table > "meowchive_votes":
+        id (int8, primary key, identity), item_id (text), vote (text),
+        voter_id (text), created_at (timestamptz, default now())
+      Add a UNIQUE constraint on (item_id, voter_id) so re-voting updates
+      instead of duplicating (Table editor > this table > ... > add constraint,
+      or SQL editor: alter table meowchive_votes add constraint uniq_vote
+      unique (item_id, voter_id);)
+      Enable Realtime for this table too.
+      Policies: SELECT using (true); INSERT with check (true);
+                UPDATE using (true) with check (true)
+   9) Table editor > New table > "meowchive_suggestions":
+        id (int8, primary key, identity), text (text),
+        created_at (timestamptz, default now())
+      Policies: INSERT with check (true);
+                SELECT using (auth.uid() is not null);   -- admin only
+                DELETE using (auth.uid() is not null)    -- admin only, to clear reviewed ones
+   ========================================================= */
+const SUPABASE_URL = "https://zrltxhnhixwryprrcsod.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpybHR4aG5oaXh3cnlwcnJjc29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTgxOTUsImV4cCI6MjEwMDkzNDE5NX0.j8N1Zkv_8cXQHZDBpZcz4OXUabYU2phE1Z52BDcvcgY";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------------- admin allowlist ----------------
+   Optional: set this to your admin's email to make sure ONLY that
+   account can enter admin mode (any other successfully-authenticated
+   Supabase user will be signed back out). Leave as "" to allow any
+   account that exists in your Supabase Auth users list (old behavior). */
+const ADMIN_EMAIL = "";
+
+/* ---------------- link/url safety ----------------
+   Only allow http(s) links to be rendered as clickable/openable.
+   Blocks javascript:, data:, vbscript: etc. from being used as an
+   href even if such a value ever ends up in the stored data. */
+function isSafeHref(url){
+  if(!url) return false;
+  try{
+    const u = new URL(String(url).trim(), location.href);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  }catch(e){ return false; }
+}
+function isSafeImageSrc(url){
+  if(!url) return false;
+  const v = String(url).trim();
+  if(/^data:image\//i.test(v)) return true;
+  try{
+    const u = new URL(v, location.href);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  }catch(e){ return false; }
+}
+
+/* ---------------- i18n ---------------- */
+const I18N = {
+  en: {
+    gateSub: "Who's prowling in today?",
+    browse: "Just browsing",
+    imAdmin: "I'm the admin",
+    adminEmail: "Admin email",
+    password: "Password",
+    unlock: "Unlock admin mode",
+    back: "← Back",
+    welcome: "Welcome to Meowchive",
+    tagline: "the shared lair for AI tools, prompts & tricks",
+    enter: "Enter the lair →",
+    switch: "Switch account",
+    logout: "Log out",
+    adminLogin: "Admin login",
+    viewerMode: "👀 Viewer mode",
+    adminMode: "🐈‍⬛ Admin mode",
+    search: "Search this sheet...",
+    topRated: "Top rated",
+    lowRated: "Lowest rated",
+    newest: "Newest",
+    filterTested: "Tested",
+    filterFree: "Free",
+    filterPaid: "Paid",
+    addItem: "+ Add item",
+    items: "items",
+    item: "item",
+    emptyAdmin: "Nothing here yet… add something 🐾",
+    emptyViewer: "Nothing here yet… check back soon 🐾",
+    copied: "Copied 🐾",
+    saved: "Saved ✨",
+    added: "Added ✨",
+    deleted: "Deleted 🗑️",
+    needTitle: "Please enter a title",
+    loadFail: "⚠️ Could not load live data",
+    saveFail: "⚠️ Save failed",
+    welcomeAdmin: "you're in admin mode — changes go live for everyone",
+    enterBoth: "Enter both email and password.",
+    notAdmin: "This account is not the admin account.",
+    wrongPass: "Wrong email or password.",
+    edit: "Edit",
+    del: "Delete",
+    tested: "✅ Tested",
+    untested: "⭕ Untested",
+    cancel: "Cancel",
+    saveChanges: "Save changes",
+    addNew: "Add item",
+    editItem: "✏️ Edit item",
+    addNewItem: "➕ Add new item",
+    cats: {
+      ai_image: "AI Image Gen",
+      ai_video: "AI Video Gen",
+      ai_code: "AI Coding",
+      ai_other: "Other AI Tools",
+      prompts: "Prompts",
+      tricks: "Tricks",
+      sites: "Useful Sites",
+      extensions: "Useful Extensions"
+    },
+    subs: {
+      free: "Free", paid: "Paid",
+      chatgpt: "ChatGPT", claude: "Claude", grok: "Grok", other_ai: "Other AI",
+      image_gen: "Image Generation", other: "Other",
+      samsung: "Samsung", xiaomi: "Xiaomi", iphone: "iPhone"
+    }
+  },
+  fa: {
+    gateSub: "کی اومده تو لونه؟",
+    browse: "فقط می‌گردم",
+    imAdmin: "من ادمینم",
+    adminEmail: "ایمیل ادمین",
+    password: "رمز عبور",
+    unlock: "ورود به حالت ادمین",
+    back: "→ بازگشت",
+    welcome: "به میو‌چایو خوش اومدی",
+    tagline: "لونهٔ مشترک ابزارها، پرامپت‌ها و ترفندهای AI",
+    enter: "ورود به لونه ←",
+    switch: "تعویض حساب",
+    logout: "خروج",
+    adminLogin: "ورود ادمین",
+    viewerMode: "👀 حالت بازدید",
+    adminMode: "🐈‍⬛ حالت ادمین",
+    search: "جستجو در این بخش...",
+    topRated: "بالاترین امتیاز",
+    lowRated: "کمترین امتیاز",
+    newest: "جدیدترین",
+    filterTested: "تست‌شده",
+    filterFree: "رایگان",
+    filterPaid: "پولی",
+    addItem: "+ افزودن",
+    items: "مورد",
+    item: "مورد",
+    emptyAdmin: "اینجا هنوز چیزی نیست… یه چیزی اضافه کن 🐾",
+    emptyViewer: "اینجا هنوز چیزی نیست… دوباره سر بزن 🐾",
+    copied: "کپی شد 🐾",
+    saved: "ذخیره شد ✨",
+    added: "اضافه شد ✨",
+    deleted: "حذف شد 🗑️",
+    needTitle: "عنوان را وارد کن",
+    loadFail: "⚠️ داده لود نشد",
+    saveFail: "⚠️ ذخیره نشد",
+    welcomeAdmin: "حالت ادمین — تغییرات برای همه زنده می‌شود",
+    enterBoth: "ایمیل و رمز را وارد کن.",
+    notAdmin: "این حساب ادمین نیست.",
+    wrongPass: "ایمیل یا رمز اشتباه است.",
+    edit: "ویرایش",
+    del: "حذف",
+    tested: "✅ تست‌شده",
+    untested: "⭕ تست‌نشده",
+    cancel: "انصراف",
+    saveChanges: "ذخیره تغییرات",
+    addNew: "افزودن",
+    editItem: "✏️ ویرایش مورد",
+    addNewItem: "➕ مورد جدید",
+    cats: {
+      ai_image: "تولید تصویر AI",
+      ai_video: "تولید ویدیو AI",
+      ai_code: "کدنویسی AI",
+      ai_other: "سایر ابزارهای AI",
+      prompts: "پرامپت‌ها",
+      tricks: "ترفندها",
+      sites: "سایت‌های مفید",
+      extensions: "افزونه‌های مفید"
+    },
+    subs: {
+      free: "رایگان", paid: "پولی",
+      chatgpt: "ChatGPT", claude: "Claude", grok: "Grok", other_ai: "سایر AI",
+      image_gen: "تولید تصویر", other: "سایر",
+      samsung: "سامسونگ", xiaomi: "شیائومی", iphone: "آیفون"
+    }
+  }
+};
+
+let locale = localStorage.getItem('meow_locale') || 'en';
+let theme = localStorage.getItem('meow_theme') || 'dark';
+
+function t(key){
+  const pack = I18N[locale] || I18N.en;
+  return pack[key] || I18N.en[key] || key;
+}
+function tCat(key){ return (I18N[locale].cats && I18N[locale].cats[key]) || I18N.en.cats[key] || key; }
+function tSub(key){ return (I18N[locale].subs && I18N[locale].subs[key]) || I18N.en.subs[key] || key; }
+
+function applyChrome(){
+  document.documentElement.lang = locale;
+  document.documentElement.dir = locale === 'fa' ? 'rtl' : 'ltr';
+  document.documentElement.dataset.theme = theme;
+  document.getElementById('langBtn').textContent = locale === 'fa' ? 'EN' : 'FA';
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '☀' : '●';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(key) el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-placeholder');
+    if(key) el.placeholder = t(key);
+  });
+}
+
+/* ---------------- decorative floating cat paws (SVG, few) ---------------- */
+const CAT_PAW_SVG = '<svg viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><ellipse cx="18" cy="16" rx="7.5" ry="9.5"/><ellipse cx="32" cy="10" rx="7.5" ry="9.5"/><ellipse cx="46" cy="16" rx="7.5" ry="9.5"/><ellipse cx="12" cy="30" rx="6.5" ry="8.5"/><ellipse cx="32" cy="42" rx="16" ry="14"/></svg>';
+(function spawnPaws(){
+  const layer = document.getElementById('pawsLayer');
+  for(let i=0;i<4;i++){
+    const s = document.createElement('div');
+    s.className = 'paw';
+    s.innerHTML = CAT_PAW_SVG;
+    s.style.left = (12 + i*22 + Math.random()*8) + 'vw';
+    s.style.animationDuration = (22 + Math.random()*10) + 's';
+    s.style.animationDelay = (i*3 + Math.random()*4) + 's';
+    s.style.width = (18 + Math.random()*8) + 'px';
+    s.style.height = s.style.width;
+    layer.appendChild(s);
+  }
+})();
+
+/* ---------------- categories ---------------- */
+const CATS = {
+  ai_image:{ icon:'🖼️', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
+  ai_video:{ icon:'🎬', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
+  ai_code:{ icon:'💻', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
+  ai_other:{ icon:'🤖', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
+  prompts:{ icon:'✍️', subs:[{key:'chatgpt'},{key:'claude'},{key:'grok'},{key:'other_ai'},{key:'image_gen'},{key:'other'}] },
+  tricks:{ icon:'💡', subs:[{key:'samsung'},{key:'xiaomi'},{key:'iphone'},{key:'other'}] },
+  sites:{ icon:'🌐' },
+  extensions:{ icon:'🧩' },
+};
+const CAT_ORDER = ['ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
+function hasSub(cat){ return !!(CATS[cat].subs && CATS[cat].subs.length); }
+function subsOf(cat){ return CATS[cat].subs || []; }
+
+let items = [];
+let currentCat = 'ai_image';
+let currentSub = 'free';
+let isAdmin = false;
+let appEntered = false;
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>el.classList.remove('show'),1700);
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+function cleanPastedText(str){
+  return str.replace(/\r\n?/g,'\n').replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g,'')
+    .split('\n').map(l=>l.replace(/[ \t]+$/,'')).join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+/* ---------------- live data ---------------- */
+let lastSyncedItemsJSON = null; // snapshot of what we last know is on the server
+let initialLoadSucceeded = false; // guards against saving before we've actually loaded real data
+
+async function loadInitialItems(){
+  const { data, error } = await sb.from('meowchive_data').select('items').eq('id', 1).single();
+  if(error){
+    console.error('Supabase read error:', error);
+    if(error.code === 'PGRST116'){
+      // No row with id=1 exists yet — this is the "insert one row with id=1" setup step.
+      showToast(locale==='fa'
+        ? '⚠️ ردیف داده در Supabase ساخته نشده (به راهنمای راه‌اندازی بالا نگاه کن)'
+        : '⚠️ Setup row missing in Supabase (see setup instructions at the top of the script)');
+    } else {
+      showToast(t('loadFail'));
+    }
+    return;
+  }
+  items = (data && data.items) || [];
+  lastSyncedItemsJSON = JSON.stringify(items);
+  initialLoadSucceeded = true;
+  render();
+}
+loadInitialItems();
+
+sb.channel('meowchive-live')
+  .on('postgres_changes', { event:'*', schema:'public', table:'meowchive_data', filter:'id=eq.1' }, payload=>{
+    items = (payload.new && payload.new.items) || [];
+    lastSyncedItemsJSON = JSON.stringify(items);
+    initialLoadSucceeded = true;
+    render();
+  })
+  .subscribe((status, err)=>{
+    console.log('Realtime channel status:', status, err || '');
+    if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED'){
+      showToast(locale==='fa' ? '⚠️ اتصال زنده برقرار نشد — Realtime را در Supabase چک کن' : '⚠️ Live connection failed — check Realtime is enabled in Supabase');
+    }
+  });
+
+/* ---------------- votes (👍/👎 per item, one per browser) ---------------- */
+let voterId = localStorage.getItem('meow_voter_id');
+if(!voterId){
+  voterId = 'v_' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+  localStorage.setItem('meow_voter_id', voterId);
+}
+let votesByItem = {}; // { itemId: { up:n, down:n, mine:'up'|'down'|null } }
+
+function tallyVotes(rows){
+  const map = {};
+  (rows||[]).forEach(r=>{
+    if(!map[r.item_id]) map[r.item_id] = { up:0, down:0, mine:null };
+    if(r.vote === 'up') map[r.item_id].up++;
+    else if(r.vote === 'down') map[r.item_id].down++;
+    if(r.voter_id === voterId) map[r.item_id].mine = r.vote;
+  });
+  return map;
+}
+async function loadVotes(){
+  const { data, error } = await sb.from('meowchive_votes').select('item_id,vote,voter_id');
+  if(error){ console.error('votes load error:', error.message); return; }
+  votesByItem = tallyVotes(data);
+  render();
+}
+loadVotes();
+sb.channel('meowchive-votes-live')
+  .on('postgres_changes', { event:'*', schema:'public', table:'meowchive_votes' }, ()=>{ loadVotes(); })
+  .subscribe();
+
+async function castVote(itemId, val){
+  const current = votesByItem[itemId] || {};
+  const newVal = current.mine === val ? null : val; // clicking the same vote again removes it
+  try{
+    if(newVal === null){
+      const { error } = await sb.from('meowchive_votes').delete().eq('item_id', itemId).eq('voter_id', voterId);
+      if(error) throw error;
+    } else {
+      const { error } = await sb.from('meowchive_votes')
+        .upsert({ item_id: itemId, vote: newVal, voter_id: voterId }, { onConflict: 'item_id,voter_id' });
+      if(error) throw error;
+    }
+  }catch(e){
+    console.error('vote error:', e.message);
+    showToast(t('voteFail') || ('⚠️ ' + e.message));
+  }
+}
+
+/* ---------------- suggestions (anyone can submit, admin reviews) ---------------- */
+async function submitSuggestion(text){
+  const clean = cleanPastedText(text).trim();
+  if(!clean) return false;
+  try{
+    const { error } = await sb.from('meowchive_suggestions').insert({ text: clean });
+    if(error) throw error;
+    return true;
+  }catch(e){
+    console.error('suggestion submit error:', e.message);
+    showToast('⚠️ ' + e.message);
+    return false;
+  }
+}
+async function loadSuggestions(){
+  const { data, error } = await sb.from('meowchive_suggestions').select('*').order('created_at', { ascending:false });
+  if(error){ console.error('suggestions load error:', error.message); return []; }
+  return data || [];
+}
+async function deleteSuggestion(id){
+  try{ await sb.from('meowchive_suggestions').delete().eq('id', id); }catch(e){ console.error(e); }
+}
+
+async function saveItems(){
+  if(!initialLoadSucceeded){
+    showToast(locale==='fa'
+      ? '⚠️ هنوز داده‌های اصلی لود نشده — صفحه را رفرش کن و دوباره امتحان کن'
+      : '⚠️ Original data hasn\'t loaded yet — refresh the page and try again');
+    return false;
+  }
+  try{
+    // Conflict check: re-read the current server state right before writing.
+    // If it no longer matches what we last synced, someone else changed it
+    // in the meantime (another admin, another tab) — refuse to blindly
+    // overwrite their changes.
+    const { data: current, error: readErr } = await sb.from('meowchive_data').select('items').eq('id', 1).single();
+    if(readErr) throw readErr;
+    const serverJSON = JSON.stringify((current && current.items) || []);
+    if(lastSyncedItemsJSON !== null && serverJSON !== lastSyncedItemsJSON){
+      showToast(locale==='fa'
+        ? '⚠️ داده روی سرور توسط شخص دیگری تغییر کرده — صفحه را رفرش کن و دوباره تلاش کن'
+        : '⚠️ Data changed on the server by someone else — refresh and try again');
+      items = (current && current.items) || [];
+      lastSyncedItemsJSON = serverJSON;
+      render();
+      return false;
+    }
+    const { error } = await sb.from('meowchive_data').update({ items }).eq('id', 1);
+    if(error) throw error;
+    lastSyncedItemsJSON = JSON.stringify(items);
+    return true;
+  }catch(e){
+    console.error(e);
+    showToast(t('saveFail') + ': ' + (e.message || e));
+    return false;
+  }
+}
+
+/* ---------------- role gate / auth ---------------- */
+document.getElementById('chooseViewer').onclick = ()=>{ isAdmin=false; goToWelcome(); };
+document.getElementById('chooseAdmin').onclick = ()=>{
+  document.getElementById('gateChoices').style.display='none';
+  document.getElementById('gateSub').style.display='none';
+  document.getElementById('loginBox').style.display='flex';
+};
+document.getElementById('loginBack').onclick = ()=>{
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('loginError').textContent='';
+  document.getElementById('gateChoices').style.display='flex';
+  document.getElementById('gateSub').style.display='block';
+};
+document.getElementById('loginBox').addEventListener('submit', e=>{ e.preventDefault(); doAdminLogin(); });
+
+async function doAdminLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  if(!email || !pass){ errEl.textContent = t('enterBoth'); return; }
+  try{
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if(error){
+      errEl.textContent = error.message;
+      console.error('Supabase auth error:', error.status, error.message);
+      return;
+    }
+    const signedInEmail = (data && data.user && data.user.email || '').toLowerCase();
+    if(ADMIN_EMAIL && signedInEmail !== ADMIN_EMAIL.toLowerCase()){
+      await sb.auth.signOut();
+      errEl.textContent = t('notAdmin');
+      return;
+    }
+    isAdmin = true;
+    goToWelcome();
+  }catch(e){
+    console.error('Supabase auth error:', e.message);
+    errEl.textContent = e.message || 'unknown error';
+  }
+}
+
+function popMeow(){
+  const el = document.getElementById('meowPop');
+  if(!el) return;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+function welcomeImpact(){
+  const rip = document.getElementById('welcomeRipple');
+  if(rip){ rip.classList.remove('burst'); void rip.offsetWidth; rip.classList.add('burst'); }
+  const layer = document.getElementById('welcomeSparks');
+  if(!layer) return;
+  for(let i=0;i<10;i++){
+    const s = document.createElement('i');
+    const ang = (Math.PI*2*i)/10 + Math.random()*0.4;
+    const dist = 28 + Math.random()*50;
+    s.style.left = '50%'; s.style.top = '70%';
+    s.style.setProperty('--sx', (Math.cos(ang)*dist)+'px');
+    s.style.setProperty('--sy', (Math.sin(ang)*dist - 20)+'px');
+    s.style.background = i%2 ? 'var(--accent2)' : 'var(--accent)';
+    layer.appendChild(s);
+    setTimeout(()=>s.remove(), 1300);
+  }
+}
+function startIntroParticles(){
+  const canvas = document.getElementById('introCanvas');
+  if(!canvas || canvas._running) return;
+  canvas._running = true;
+  const ctx = canvas.getContext('2d');
+  let w, h, particles, raf;
+  function resize(){
+    w = canvas.width = window.innerWidth * devicePixelRatio;
+    h = canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth+'px';
+    canvas.style.height = window.innerHeight+'px';
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  function spawn(){
+    particles = Array.from({length: 70}, ()=>({
+      x: Math.random()*window.innerWidth,
+      y: Math.random()*window.innerHeight,
+      r: Math.random()*1.8 + 0.4,
+      vx: (Math.random()-.5)*0.25,
+      vy: (Math.random()-.5)*0.25 - 0.08,
+      a: Math.random()*0.5 + 0.15,
+      hue: Math.random()>.5 ? 280 : 320
+    }));
+  }
+  function tick(){
+    if(document.getElementById('welcomeScreen').style.display === 'none'){
+      cancelAnimationFrame(raf); canvas._running=false; return;
+    }
+    ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    // soft center glow
+    const g = ctx.createRadialGradient(window.innerWidth/2, window.innerHeight*0.42, 0, window.innerWidth/2, window.innerHeight*0.42, window.innerWidth*0.35);
+    g.addColorStop(0, 'rgba(178,107,255,0.12)');
+    g.addColorStop(0.5, 'rgba(255,107,214,0.04)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+    for(const p of particles){
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<0) p.x=window.innerWidth; if(p.x>window.innerWidth) p.x=0;
+      if(p.y<0) p.y=window.innerHeight; if(p.y>window.innerHeight) p.y=0;
+      ctx.beginPath();
+      ctx.fillStyle = 'hsla('+p.hue+',90%,75%,'+p.a+')';
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // connecting lines near center
+    const cx = window.innerWidth/2, cy = window.innerHeight*0.42;
+    for(let i=0;i<particles.length;i++){
+      const a = particles[i];
+      const da = Math.hypot(a.x-cx, a.y-cy);
+      if(da>160) continue;
+      for(let j=i+1;j<particles.length;j++){
+        const b = particles[j];
+        const d = Math.hypot(a.x-b.x, a.y-b.y);
+        if(d<90){
+          ctx.strokeStyle = 'rgba(178,107,255,'+(0.12*(1-d/90))+')';
+          ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+        }
+      }
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  resize(); spawn(); tick();
+  window.addEventListener('resize', ()=>{ resize(); });
+}
+function playWelcomeCat(){
+  startIntroParticles();
+  const cat = document.getElementById('welcomeCat');
+  if(!cat) return;
+  cat.classList.remove('drop-bounce','idle');
+  void cat.offsetWidth;
+  cat.classList.add('drop-bounce');
+  setTimeout(()=>{ popMeow(); welcomeImpact(); }, 2350);
+  setTimeout(()=>{ cat.classList.remove('drop-bounce'); cat.classList.add('idle'); }, 2850);
+}
+function goToWelcome(){
+  document.getElementById('roleGate').style.display = 'none';
+  const w = document.getElementById('welcomeScreen');
+  w.style.display = 'flex';
+  document.getElementById('welcomeSub').textContent = isAdmin ? t('welcomeAdmin') : t('tagline');
+  playWelcomeCat();
+}
+document.getElementById('enterSite').onclick = ()=>{
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  appEntered = true;
+  sessionStorage.setItem('meow_entered', '1');
+  history.pushState({view:'app'}, '', location.pathname);
+  updateModeUI();
+};
+window.addEventListener('popstate', (e)=>{
+  const view = (e.state && e.state.view) || 'welcome';
+  document.getElementById('roleGate').style.display = 'none';
+  if(view === 'app'){
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    appEntered = true;
+    updateModeUI();
+  } else {
+    document.getElementById('app').style.display = 'none';
+    appEntered = false;
+    sessionStorage.removeItem('meow_entered');
+    document.getElementById('welcomeScreen').style.display = 'flex';
+    document.getElementById('welcomeSub').textContent = isAdmin ? t('welcomeAdmin') : t('tagline');
+  }
+});
+document.getElementById('switchBtn').onclick = async ()=>{
+  if(isAdmin){ try{ await sb.auth.signOut(); }catch(e){} }
+  sessionStorage.removeItem('meow_entered');
+  location.reload();
+};
+
+document.getElementById('langBtn').onclick = ()=>{
+  locale = locale === 'fa' ? 'en' : 'fa';
+  localStorage.setItem('meow_locale', locale);
+  applyChrome();
+  updateModeUI();
+  if(appEntered) render();
+  else {
+    const sub = document.getElementById('welcomeSub');
+    if(document.getElementById('welcomeScreen').style.display !== 'none'){
+      sub.textContent = isAdmin ? t('welcomeAdmin') : t('tagline');
+    }
+  }
+};
+document.getElementById('themeBtn').onclick = ()=>{
+  theme = theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('meow_theme', theme);
+  applyChrome();
+};
+
+function updateModeUI(){
+  const badge = document.getElementById('modeBadge');
+  const addBtn = document.getElementById('addBtn');
+  const switchBtn = document.getElementById('switchBtn');
+  const inboxBtn = document.getElementById('inboxBtn');
+  if(isAdmin){
+    badge.innerHTML = t('adminMode'); badge.className = 'mode-badge admin';
+    addBtn.style.display = 'inline-block';
+    switchBtn.style.display = 'inline-block';
+    switchBtn.textContent = t('logout');
+    inboxBtn.style.display = 'inline-block';
+  } else {
+    const label = t('viewerMode').replace(/^👀\s*/,'').replace(/^👀/,'');
+    badge.innerHTML = '<span class="watch-eye" id="watchEye" aria-hidden="true"><span class="ball"><span class="pupil"></span></span><span class="ball"><span class="pupil"></span></span></span> ' + label;
+    badge.className = 'mode-badge viewer';
+    addBtn.style.display = 'none';
+    switchBtn.style.display = 'none'; // no admin button for public
+    inboxBtn.style.display = 'none';
+  }
+  render();
+}
+
+document.addEventListener('mousemove', (e)=>{
+  const eye = document.getElementById('watchEye');
+  if(!eye) return;
+  eye.querySelectorAll('.ball').forEach(ball=>{
+    const r = ball.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const dx = e.clientX - cx, dy = e.clientY - cy;
+    const max = 2.4;
+    const dist = Math.min(max, Math.hypot(dx,dy)/40);
+    const ang = Math.atan2(dy, dx);
+    const px = Math.cos(ang) * dist, py = Math.sin(ang) * dist;
+    const pupil = ball.querySelector('.pupil');
+    if(pupil) pupil.style.transform = 'translate(calc(-50% + '+px+'px), calc(-50% + '+py+'px))';
+  });
+});
+
+/* ---------------- tabs ---------------- */
+function buildTabs(){
+  const nav = document.getElementById('mainTabs'); nav.innerHTML = '';
+  CAT_ORDER.forEach(key=>{
+    const b = document.createElement('button');
+    b.dataset.key = key;
+    b.innerHTML = '<span class="tab-ico">'+CATS[key].icon+'</span> ' + tCat(key);
+    b.className = key===currentCat ? 'active' : '';
+    b.onclick = ()=>{ currentCat=key; if(hasSub(key)) currentSub=subsOf(key)[0].key; document.getElementById('searchBox').value=''; render(); };
+    nav.appendChild(b);
+  });
+}
+function buildSubTabs(){
+  const st = document.getElementById('subTabs');
+  if(!hasSub(currentCat)){ st.style.display='none'; return; }
+  st.style.display='flex'; st.innerHTML='';
+  subsOf(currentCat).forEach(s=>{
+    const b=document.createElement('button');
+    b.textContent=tSub(s.key); b.className = currentSub===s.key?'active':'';
+    b.onclick=()=>{ currentSub=s.key; render(); };
+    st.appendChild(b);
+  });
+}
+function currentItems(){
+  let list = items.filter(it=>it.cat===currentCat);
+  if(hasSub(currentCat)) list = list.filter(it=>it.sub===currentSub);
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  if(q) list = list.filter(it=>(it.title||'').toLowerCase().includes(q) || (it.note||'').toLowerCase().includes(q));
+  const sortBy = document.getElementById('sortSel').value;
+  // filters (narrow list)
+  if(sortBy==='tested') list = list.filter(it=>!!it.tested);
+  else if(sortBy==='free') list = list.filter(it=>it.sub==='free' || /free|رایگان/i.test(it.note||'') || /free|رایگان/i.test(it.title||''));
+  else if(sortBy==='paid') list = list.filter(it=>it.sub==='paid' || /paid|پولی|premium/i.test(it.note||'') || /paid|پولی/i.test(it.title||''));
+  // sorts
+  if(sortBy==='rating') list.sort((a,b)=>(b.rating||0)-(a.rating||0));
+  else if(sortBy==='low') list.sort((a,b)=>(a.rating||0)-(b.rating||0));
+  else if(sortBy==='az') list.sort((a,b)=>a.title.localeCompare(b.title, locale==='fa'?'fa':'en'));
+  else if(sortBy==='new' || sortBy==='tested' || sortBy==='free' || sortBy==='paid') list.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  else list.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  return list;
+}
+function starsHtml(rating, id){
+  let out = '<span class="stars '+(isAdmin?'editable':'')+'" data-id="'+(id||'')+'">';
+  for(let i=1;i<=5;i++) out += '<span class="'+(i<=rating?'on':'')+'" data-val="'+i+'">★</span>';
+  return out + '</span>';
+}
+
+function render(){
+  if(!appEntered) return;
+  buildTabs(); buildSubTabs();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyMsg');
+  const list = currentItems();
+  document.getElementById('countLabel').textContent = list.length + ' ' + (list.length===1 ? t('item') : t('items'));
+  grid.innerHTML='';
+  if(list.length===0){
+    empty.style.display='block';
+    empty.innerHTML = '<span class="empty-paw">'+CAT_PAW_SVG+'</span><div>' + (isAdmin ? t('emptyAdmin') : t('emptyViewer')) + '</div>';
+    return;
+  }
+  empty.style.display='none';
+
+  list.forEach((it,i)=>{
+    const card = document.createElement('div');
+    card.className = 'card'; card.style.animationDelay = (i*0.03)+'s';
+    let badge='';
+    if(hasSub(it.cat)){
+      const s=subsOf(it.cat).find(x=>x.key===it.sub);
+      const cls=(s&&s.cls)?s.cls:'neutral';
+      badge='<span class="badge '+cls+'">'+tSub(it.sub)+'</span>';
+    }
+    let imgHtml = (it.image && isSafeImageSrc(it.image)) ? '<img class="sample" src="'+escapeAttr(it.image)+'" alt="preview" onerror="this.style.display=\'none\'">' : '';
+    const linkList = (it.links && it.links.length) ? it.links : (it.url ? [it.url] : []);
+    let linksHtml = linkList.length ? '<div class="links-list">'+linkList.map(l=> isSafeHref(l)
+      ? '<a class="link" href="'+escapeAttr(l)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(l)+'</a>'
+      : '<span class="link" style="opacity:.6;cursor:not-allowed" title="unsafe link blocked">'+escapeHtml(l)+'</span>'
+    ).join('')+'</div>' : '';
+    const tested = !!it.tested;
+    const testedHtml = '<span class="tested-badge '+(tested?'tested':'untested')+'">'+(tested?t('tested'):t('untested'))+'</span>';
+    let promptHtml='';
+    const promptList = (it.promptTexts && it.promptTexts.length) ? it.promptTexts : (it.promptText ? [{label:'',text:it.promptText}] : []);
+    if(promptList.length){
+      promptHtml = '<div class="prompts-list">' + promptList.map((p,idx)=>`
+        <div class="promptbox" data-id="${it.id}" data-idx="${idx}" title="Copy">
+          ${p.label ? '<div class="promptbox-label">'+escapeHtml(p.label)+'</div>' : ''}
+          <div class="promptbox-text">${escapeHtml(p.text)}</div>
+          <button class="copy-btn" data-id="${it.id}" data-idx="${idx}" title="Copy">📋</button>
+        </div>`).join('') + '</div>';
+    }
+    const vt = votesByItem[it.id] || { up:0, down:0, mine:null };
+    const voteHtml = `
+      <div class="vote-row">
+        <button class="vote-btn ${vt.mine==='up'?'on-up':''}" data-vote="up" data-id="${it.id}">👍 <span>${vt.up}</span></button>
+        <button class="vote-btn ${vt.mine==='down'?'on-down':''}" data-vote="down" data-id="${it.id}">👎 <span>${vt.down}</span></button>
+      </div>`;
+    card.innerHTML = `
+      ${badge}
+      <h3>${escapeHtml(it.title)}</h3>
+      ${testedHtml}
+      ${linksHtml}
+      ${(()=>{
+        const nlist = (it.noteTexts && it.noteTexts.length) ? it.noteTexts : (it.note ? [{label:'',text:it.note}] : []);
+        if(!nlist.length) return '';
+        return nlist.map(n=>'<p class="note">'+(n.label?'<strong>'+escapeHtml(n.label)+':</strong> ':'')+escapeHtml(n.text)+'</p>').join('');
+      })()}
+      ${imgHtml}
+      ${promptHtml}
+      ${voteHtml}
+      <div class="card-footer">
+        ${starsHtml(it.rating||0, it.id)}
+        <div class="card-actions">
+          ${isAdmin ? `<button data-act="edit" data-id="${it.id}">${t('edit')}</button><button data-act="del" data-id="${it.id}">${t('del')}</button>` : ''}
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('.vote-btn').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      castVote(el.getAttribute('data-id'), el.getAttribute('data-vote'));
+    });
+  });
+
+  grid.querySelectorAll('.promptbox, .copy-btn').forEach(el=>{
+    el.addEventListener('click', e=>{ e.stopPropagation(); copyPrompt(el.getAttribute('data-id'), el.getAttribute('data-idx')); });
+  });
+
+  if(isAdmin){
+    grid.querySelectorAll('.stars.editable').forEach(starEl=>{
+      starEl.addEventListener('click', e=>{
+        const val = e.target.getAttribute('data-val'); if(!val) return;
+        const it = items.find(x=>x.id===starEl.getAttribute('data-id'));
+        if(it){ it.rating = parseInt(val); render(); saveItems(); }
+      });
+    });
+    grid.querySelectorAll('[data-act="edit"]').forEach(b=> b.onclick = ()=> openModal(b.getAttribute('data-id')));
+    grid.querySelectorAll('[data-act="del"]').forEach(b=>{
+      b.onclick = ()=>{
+        const id = b.getAttribute('data-id');
+        items = items.filter(x=>x.id!==id);
+        render(); saveItems(); showToast(t('deleted'));
+      };
+    });
+  }
+}
+
+async function copyPrompt(id, idx){
+  const it = items.find(x=>x.id===id); if(!it) return;
+  const list = (it.promptTexts && it.promptTexts.length) ? it.promptTexts : (it.promptText ? [{label:'',text:it.promptText}] : []);
+  const entry = list[parseInt(idx)||0]; if(!entry || !entry.text) return;
+  try{ await navigator.clipboard.writeText(entry.text); }
+  catch(e){
+    const ta=document.createElement('textarea'); ta.value=entry.text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e2){} ta.remove();
+  }
+  showToast(t('copied'));
+}
+
+function debounce(fn, ms){
+  let h;
+  return (...args)=>{ clearTimeout(h); h=setTimeout(()=>fn(...args), ms); };
+}
+document.getElementById('sortSel').addEventListener('change', render);
+document.getElementById('searchBox').addEventListener('input', debounce(render, 180));
+document.getElementById('addBtn').addEventListener('click', ()=> openModal(null));
+
+/* ---------------- add/edit modal ---------------- */
+function openModal(id){
+  if(!isAdmin) return;
+  const existing = id ? items.find(x=>x.id===id) : null;
+  const cat = existing ? existing.cat : currentCat;
+  const catHasSub = hasSub(cat);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${existing ? t('editItem') : t('addNewItem')}</h2>
+      <label>Sheet / بخش
+        <select id="f_cat">${CAT_ORDER.map(k=>`<option value="${k}" ${k===cat?'selected':''}>${CATS[k].icon} ${tCat(k)}</option>`).join('')}</select>
+      </label>
+      <label id="f_sub_wrap" style="display:${catHasSub?'flex':'none'};">
+        Subgroup
+        <select id="f_sub">${subsOf(cat).map(s=>`<option value="${s.key}" ${existing && existing.sub===s.key?'selected':''}>${tSub(s.key)}</option>`).join('')}</select>
+      </label>
+      <label>${locale==='fa'?'عنوان':'Title'}
+        <input id="f_title" type="text" value="${existing ? escapeAttr(existing.title) : ''}" placeholder="e.g. Midjourney">
+      </label>
+      <label>${locale==='fa'?'لینک‌ها':'Links'}
+        <div id="f_links_wrap" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <button type="button" class="add-link-btn" id="f_add_link">+ Add link</button>
+      </label>
+      <label id="f_img_wrap">
+        ${locale==='fa'?'تصویر نمونه':'Sample image'}
+        <input id="f_image" type="text" value="${existing ? escapeAttr(existing.image||'') : ''}" placeholder="URL or upload">
+        <input id="f_image_file" type="file" accept="image/*" style="padding:4px;">
+        <img id="f_image_preview" src="${existing && existing.image ? escapeAttr(existing.image) : ''}" style="max-width:100%;max-height:140px;border-radius:8px;margin-top:4px;display:${existing && existing.image ? 'block':'none'};border:1px solid var(--line);">
+      </label>
+      <label id="f_notes_wrap_label">${locale==='fa'?'توضیحات':'Notes'} <span class="hint">(max 10)</span>
+        <div id="f_notes_wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button type="button" class="add-link-btn" id="f_add_note">+ ${locale==='fa'?'افزودن توضیح':'Add note'}</button>
+      </label>
+      <label id="f_prompt_wrap">
+        ${locale==='fa'?'متن‌های قابل کپی':'Copyable snippets'} <span class="hint">(max 10)</span>
+        <div id="f_prompts_wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button type="button" class="add-link-btn" id="f_add_prompt">+ Add snippet</button>
+      </label>
+      <label>${locale==='fa'?'وضعیت تست':'Tested'}
+        <div class="tested-toggle" id="f_tested">
+          <button type="button" data-val="1" class="${existing && existing.tested ? 'on':''}">${t('tested')}</button>
+          <button type="button" data-val="0" class="${existing && !existing.tested ? 'on':''}">${t('untested')}</button>
+        </div>
+      </label>
+      <label>${locale==='fa'?'امتیاز':'Rating'}
+        <div class="ratepick" id="f_rate">${[1,2,3,4,5].map(i=>`<span data-val="${i}" class="${existing && existing.rating>=i ? 'on':''}">★</span>`).join('')}</div>
+      </label>
+      <div class="modal-actions">
+        <button id="f_cancel">${t('cancel')}</button>
+        <button class="save" id="f_save">${existing ? t('saveChanges') : t('addNew')}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('paste', e=>{
+    if(e.target.tagName !== 'TEXTAREA') return;
+    e.preventDefault();
+    const raw = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const cleaned = cleanPastedText(raw);
+    const el = e.target, start = el.selectionStart, end = el.selectionEnd, val = el.value;
+    el.value = val.slice(0,start) + cleaned + val.slice(end);
+    el.selectionStart = el.selectionEnd = start + cleaned.length;
+  });
+
+  let rateVal = existing ? (existing.rating||0) : 0;
+  const rateWrap = overlay.querySelector('#f_rate');
+  rateWrap.querySelectorAll('span').forEach(s=>{
+    s.onclick = ()=>{ rateVal = parseInt(s.getAttribute('data-val')); rateWrap.querySelectorAll('span').forEach(x=>x.classList.toggle('on', parseInt(x.getAttribute('data-val'))<=rateVal)); };
+  });
+
+  const imgUrlInput = overlay.querySelector('#f_image');
+  const imgPreview = overlay.querySelector('#f_image_preview');
+  const imgFileInput = overlay.querySelector('#f_image_file');
+  imgUrlInput.addEventListener('input', ()=>{ if(imgUrlInput.value.trim()){ imgPreview.src=imgUrlInput.value.trim(); imgPreview.style.display='block'; } else imgPreview.style.display='none'; });
+  imgFileInput.addEventListener('change', ()=>{
+    const file = imgFileInput.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW=700, scale=Math.min(1, maxW/img.width);
+        const canvas=document.createElement('canvas'); canvas.width=img.width*scale; canvas.height=img.height*scale;
+        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        imgUrlInput.value=dataUrl; imgPreview.src=dataUrl; imgPreview.style.display='block';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const MAX_LINKS=10;
+  const linksWrap = overlay.querySelector('#f_links_wrap');
+  const addLinkBtn = overlay.querySelector('#f_add_link');
+  function addLinkRow(value){
+    if(linksWrap.children.length >= MAX_LINKS) return;
+    const row = document.createElement('div'); row.className='linkrow';
+    row.innerHTML = `<input type="text" class="link-input" placeholder="https://..." value="${escapeAttr(value||'')}"><button type="button">✕</button>`;
+    row.querySelector('button').onclick = ()=>{ row.remove(); addLinkBtn.disabled = linksWrap.children.length >= MAX_LINKS; };
+    linksWrap.appendChild(row); addLinkBtn.disabled = linksWrap.children.length >= MAX_LINKS;
+  }
+  const initialLinks = existing ? (existing.links && existing.links.length ? existing.links : (existing.url ? [existing.url] : [])) : [];
+  if(initialLinks.length){ initialLinks.forEach(l=>addLinkRow(l)); } else { addLinkRow(''); }
+  addLinkBtn.onclick = ()=> addLinkRow('');
+
+  const MAX_PROMPTS=10;
+  const promptsWrap = overlay.querySelector('#f_prompts_wrap');
+  const addPromptBtn = overlay.querySelector('#f_add_prompt');
+  function addPromptRow(label,text){
+    if(promptsWrap.children.length >= MAX_PROMPTS) return;
+    const row = document.createElement('div'); row.className='promptrow';
+    row.innerHTML = `<div style="display:flex;gap:6px;"><input type="text" class="prompt-label" placeholder="Label" value="${escapeAttr(label||'')}" style="flex:1;"><button type="button">✕</button></div><textarea class="prompt-text" rows="3" placeholder="Text">${escapeHtml(text||'')}</textarea>`;
+    row.querySelector('button').onclick = ()=>{ row.remove(); addPromptBtn.disabled = promptsWrap.children.length >= MAX_PROMPTS; };
+    promptsWrap.appendChild(row); addPromptBtn.disabled = promptsWrap.children.length >= MAX_PROMPTS;
+  }
+  const initialPrompts = existing ? (existing.promptTexts && existing.promptTexts.length ? existing.promptTexts : (existing.promptText ? [{label:'',text:existing.promptText}] : [])) : [];
+  if(initialPrompts.length){ initialPrompts.forEach(p=>addPromptRow(p.label,p.text)); } else { addPromptRow('',''); }
+  addPromptBtn.onclick = ()=> addPromptRow('','');
+
+  const MAX_NOTES=10;
+  const notesWrap = overlay.querySelector('#f_notes_wrap');
+  const addNoteBtn = overlay.querySelector('#f_add_note');
+  function addNoteRow(label,text){
+    if(notesWrap.children.length >= MAX_NOTES) return;
+    const row = document.createElement('div'); row.className='promptrow';
+    row.innerHTML = `<div style="display:flex;gap:6px;"><input type="text" class="note-label" placeholder="${locale==='fa'?'عنوان توضیح (اختیاری)':'Note label (optional)'}" value="${escapeAttr(label||'')}" style="flex:1;"><button type="button">✕</button></div><textarea class="note-text" rows="3" placeholder="${locale==='fa'?'متن توضیح':'Note text'}">${escapeHtml(text||'')}</textarea>`;
+    row.querySelector('button').onclick = ()=>{ row.remove(); addNoteBtn.disabled = notesWrap.children.length >= MAX_NOTES; };
+    notesWrap.appendChild(row); addNoteBtn.disabled = notesWrap.children.length >= MAX_NOTES;
+  }
+  const initialNotes = existing ? (
+    existing.noteTexts && existing.noteTexts.length ? existing.noteTexts
+    : (existing.note ? [{label:'',text:existing.note}] : [])
+  ) : [];
+  if(initialNotes.length){ initialNotes.forEach(n=>addNoteRow(n.label,n.text)); } else { addNoteRow('',''); }
+  addNoteBtn.onclick = ()=> addNoteRow('','');
+
+  let testedVal = existing ? !!existing.tested : false;
+  const testedWrap = overlay.querySelector('#f_tested');
+  testedWrap.querySelectorAll('button').forEach(btn=>{
+    btn.onclick = ()=>{ testedVal = btn.getAttribute('data-val')==='1'; testedWrap.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b===btn)); };
+  });
+
+  const catSel = overlay.querySelector('#f_cat');
+  catSel.onchange = ()=>{
+    const c = catSel.value;
+    const subWrap = overlay.querySelector('#f_sub_wrap');
+    subWrap.style.display = hasSub(c) ? 'flex':'none';
+    if(hasSub(c)){ overlay.querySelector('#f_sub').innerHTML = subsOf(c).map(s=>`<option value="${s.key}">${tSub(s.key)}</option>`).join(''); }
+  };
+
+  overlay.querySelector('#f_cancel').onclick = ()=> overlay.remove();
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+
+  overlay.querySelector('#f_save').onclick = async ()=>{
+    const title = overlay.querySelector('#f_title').value.trim();
+    if(!title){ showToast(t('needTitle')); return; }
+    const c = catSel.value;
+    const rawLinks = Array.from(overlay.querySelectorAll('.link-input')).map(i=>i.value.trim()).filter(Boolean);
+    const links = rawLinks.filter(isSafeHref);
+    if(rawLinks.length !== links.length){ showToast(locale==='fa' ? 'یک یا چند لینک نامعتبر بود و حذف شد' : 'One or more links were invalid and were removed'); }
+    const rawImage = overlay.querySelector('#f_image').value.trim();
+    const safeImage = (!rawImage || isSafeImageSrc(rawImage)) ? rawImage : '';
+    const promptTexts = Array.from(promptsWrap.children).map(row=>({ label: row.querySelector('.prompt-label').value.trim(), text: row.querySelector('.prompt-text').value.trim() })).filter(p=>p.text);
+    const noteTexts = Array.from(notesWrap.children).map(row=>({ label: row.querySelector('.note-label').value.trim(), text: row.querySelector('.note-text').value.trim() })).filter(n=>n.text);
+    const noteJoined = noteTexts.map(n=>n.label? (n.label+': '+n.text):n.text).join('\n\n');
+    const payload = { cat:c, sub: hasSub(c) ? overlay.querySelector('#f_sub').value : undefined, title, links, image: safeImage, note: noteJoined, noteTexts, promptTexts, tested: testedVal, rating: rateVal };
+    const saveBtn = overlay.querySelector('#f_save');
+    saveBtn.textContent = '...'; saveBtn.disabled = true;
+    const backup = existing ? Object.assign({}, existing) : null;
+    if(existing){ Object.assign(existing, payload); } else { items.push(Object.assign({ id: uid(), ts: Date.now() }, payload)); }
+    const ok = await saveItems();
+    if(!ok){
+      if(existing && backup){ Object.assign(existing, backup); } else { items.pop(); }
+      saveBtn.textContent = existing ? t('saveChanges') : t('addNew'); saveBtn.disabled = false;
+      return;
+    }
+    currentCat = c; if(hasSub(c)) currentSub = payload.sub;
+    overlay.remove(); render();
+    showToast(existing ? t('saved') : t('added'));
+  };
+}
+
+/* ---------------- suggest-something modal (everyone) ---------------- */
+document.getElementById('suggestBtn').onclick = ()=>{
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>💡 ${locale==='fa' ? 'یه چیزی پیشنهاد بده' : 'Suggest something'}</h2>
+      <label>${locale==='fa' ? 'یه ابزار، ترفند، یا هرچی که فکر می‌کنی باید اینجا باشه رو بنویس' : "A tool, trick, or anything you think belongs here"}
+        <textarea id="sugg_text" rows="5" placeholder="${locale==='fa' ? 'مثلاً: فلان سایت رو تست کن، یا فلان ترفند رو اضافه کن' : 'e.g. try this site, or add this trick'}"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button id="sugg_cancel">${locale==='fa' ? 'انصراف' : 'Cancel'}</button>
+        <button class="save" id="sugg_submit">${locale==='fa' ? 'ارسال' : 'Send'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('paste', e=>{
+    if(e.target.tagName !== 'TEXTAREA') return;
+    e.preventDefault();
+    const raw = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const cleaned = cleanPastedText(raw);
+    const el = e.target, start = el.selectionStart, end = el.selectionEnd, val = el.value;
+    el.value = val.slice(0,start) + cleaned + val.slice(end);
+    el.selectionStart = el.selectionEnd = start + cleaned.length;
+  });
+  overlay.querySelector('#sugg_cancel').onclick = ()=> overlay.remove();
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+  overlay.querySelector('#sugg_submit').onclick = async ()=>{
+    const val = overlay.querySelector('#sugg_text').value;
+    if(!val.trim()){ showToast(locale==='fa' ? 'یه متنی بنویس' : 'Write something first'); return; }
+    const btn = overlay.querySelector('#sugg_submit');
+    btn.disabled = true; btn.textContent = '...';
+    const ok = await submitSuggestion(val);
+    if(ok){ overlay.remove(); showToast(locale==='fa' ? 'فرستاده شد، مرسی! 🐾' : 'Sent, thank you! 🐾'); }
+    else { btn.disabled = false; btn.textContent = locale==='fa' ? 'ارسال' : 'Send'; }
+  };
+};
+
+/* ---------------- inbox modal (admin only — button itself is hidden for viewers) ---------------- */
+document.getElementById('inboxBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>📥 ${locale==='fa' ? 'پیشنهادهای کاربرا' : 'User suggestions'}</h2>
+      <div id="inbox_list" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto;">
+        <div class="hint">${locale==='fa' ? 'در حال بارگذاری...' : 'Loading...'}</div>
+      </div>
+      <div class="modal-actions"><button id="inbox_close">${locale==='fa' ? 'بستن' : 'Close'}</button></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#inbox_close').onclick = ()=> overlay.remove();
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.remove(); };
+
+  const rows = await loadSuggestions();
+  const list = overlay.querySelector('#inbox_list');
+  if(!rows.length){
+    list.innerHTML = `<div class="hint">${locale==='fa' ? 'هنوز پیشنهادی نیومده.' : 'No suggestions yet.'}</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(r=>`
+    <div class="promptrow" data-row-id="${r.id}">
+      <div class="promptbox-text" style="white-space:pre-wrap;">${escapeHtml(r.text)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="hint">${new Date(r.created_at).toLocaleString(locale==='fa'?'fa-IR':'en-US')}</span>
+        <button class="del-suggestion" data-id="${r.id}">${locale==='fa' ? 'حذف' : 'Delete'}</button>
+      </div>
+    </div>`).join('');
+  list.querySelectorAll('.del-suggestion').forEach(b=>{
+    b.onclick = async ()=>{
+      const id = b.getAttribute('data-id');
+      await deleteSuggestion(id);
+      const row = list.querySelector(`[data-row-id="${id}"]`);
+      if(row) row.remove();
+      if(!list.querySelector('[data-row-id]')){
+        list.innerHTML = `<div class="hint">${locale==='fa' ? 'هنوز پیشنهادی نیومده.' : 'No suggestions yet.'}</div>`;
+      }
+    };
+  });
+};
+
+applyChrome();
+
+/* -------- boot: visitors skip role gate; admin is secret -------- */
+(async function bootFlow(){
+  // Resolve any existing Supabase session up front (fixes: reload used to
+  // lose admin status and always show the welcome screen from scratch).
+  try{
+    const { data } = await sb.auth.getSession();
+    if(data && data.session && data.session.user){
+      const email = (data.session.user.email || '').toLowerCase();
+      if(!ADMIN_EMAIL || email === ADMIN_EMAIL.toLowerCase()){
+        isAdmin = true;
+      }
+    }
+  }catch(e){ console.error('getSession failed:', e); }
+
+  sb.auth.onAuthStateChange((event, session)=>{
+    if(session && session.user){
+      const email = (session.user.email || '').toLowerCase();
+      if(ADMIN_EMAIL && email !== ADMIN_EMAIL.toLowerCase()){
+        sb.auth.signOut();
+        isAdmin = false;
+        return;
+      }
+      isAdmin = true;
+      if(appEntered) updateModeUI();
+    } else {
+      isAdmin = false;
+      if(appEntered) updateModeUI();
+    }
+  });
+
+  // URL secret: meowchive.html#admin  or  ?admin=1
+  const wantAdmin = location.hash === '#admin' || /[?&]admin=1(?:&|$)/.test(location.search);
+  history.replaceState({view:'welcome'}, '', location.pathname);
+  if(wantAdmin){
+    document.getElementById('welcomeScreen').style.display = 'none';
+    openAdminLogin();
+    return;
+  }
+
+  // Already entered earlier in this browser tab? Skip straight back in
+  // instead of forcing the welcome screen again on every reload.
+  if(sessionStorage.getItem('meow_entered') === '1'){
+    document.getElementById('roleGate').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    appEntered = true;
+    history.pushState({view:'app'}, '', location.pathname);
+    updateModeUI();
+    return;
+  }
+
+  // normal visitors: welcome as viewer
+  document.getElementById('roleGate').style.display = 'none';
+  document.getElementById('welcomeScreen').style.display = 'flex';
+  document.getElementById('welcomeSub').textContent = t('tagline');
+  playWelcomeCat();
+})();
+
+function openAdminLogin(){
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('roleGate').style.display = 'flex';
+  document.getElementById('gateChoices').style.display = 'none';
+  document.getElementById('gateSub').style.display = 'none';
+  document.getElementById('loginBox').style.display = 'flex';
+  const h = document.querySelector('#roleGate h1');
+  // keep brand
+}
+
+/* secret: 5 quick clicks on welcome cat opens admin login */
+(function secretAdminClicks(){
+  let n = 0, t0 = 0;
+  document.addEventListener('click', (e)=>{
+    const cat = e.target.closest && e.target.closest('#welcomeCat, .welcome-cat-wrap, #roleGate .gate-cat');
+    if(!cat) return;
+    const now = Date.now();
+    if(now - t0 > 2500) n = 0;
+    t0 = now;
+    n++;
+    if(n >= 5){
+      n = 0;
+      openAdminLogin();
+      showToast(locale==='fa' ? 'ورود ادمین' : 'Admin unlock');
+    }
+  });
+})();
+
+/* secret keyboard: press A three times quickly while on welcome */
+(function secretAdminKeys(){
+  let n = 0, t0 = 0;
+  document.addEventListener('keydown', (e)=>{
+    if(document.getElementById('app').style.display === 'block') return;
+    if(e.key !== 'a' && e.key !== 'A' && e.key !== 'ش') return;
+    const now = Date.now();
+    if(now - t0 > 1500) n = 0;
+    t0 = now;
+    n++;
+    if(n >= 3){
+      n = 0;
+      openAdminLogin();
+    }
+  });
+})();
+
+</script>
+</body>
+</html>
