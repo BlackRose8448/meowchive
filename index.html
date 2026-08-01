@@ -490,7 +490,12 @@
   .toolbar-left{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .searchbox{
     background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:8px;
-    padding:8px 12px; font-size:13px; font-family:inherit; min-width:170px;
+    padding:0; font-size:13px; font-family:inherit;
+    width:0; opacity:0; border-width:0; pointer-events:none;
+    transition: width .2s ease, opacity .2s ease, padding .2s ease, border-width .2s ease;
+  }
+  .searchbox.expanded{
+    width:170px; opacity:1; padding:8px 12px; border-width:1px; pointer-events:auto;
   }
   .searchbox:focus{ outline:none; border-color:var(--accent); }
   select.sortsel{
@@ -566,6 +571,7 @@
   .vote-btn:hover{ border-color:var(--accent); }
   .vote-btn.on-up{ background:rgba(111,230,160,.15); color:var(--green); border-color:var(--green); }
   .vote-btn.on-down{ background:rgba(255,107,107,.15); color:#ff8080; border-color:#ff8080; }
+  .sheet-tag{ font-size:10.5px; color:var(--text-dim); background:#0d0d17; border:1px solid var(--line); border-radius:999px; padding:2px 8px; align-self:flex-start; }
   .card-actions button{
     background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px;
     font-family:inherit; padding:2px 6px;
@@ -721,6 +727,8 @@
       </div>
     </div>
     <div class="mode-area">
+      <button class="icon-chip" id="searchToggleBtn" type="button" title="Search">🔍</button>
+      <input class="searchbox" id="searchBox" data-i18n-placeholder="search" placeholder="Search this sheet...">
       <button class="icon-chip" id="langBtn" type="button">FA</button>
       <button class="icon-chip" id="themeBtn" type="button">☀</button>
       <button class="admin-btn" id="suggestBtn" type="button">💡 Suggest</button>
@@ -735,7 +743,6 @@
 
   <div class="toolbar">
     <div class="toolbar-left">
-      <input class="searchbox" id="searchBox" data-i18n-placeholder="search" placeholder="Search this sheet...">
       <select class="sortsel" id="sortSel">
         <option value="rating" data-i18n="topRated">Top rated</option>
         <option value="low" data-i18n="lowRated">Lowest rated</option>
@@ -781,8 +788,36 @@
       or SQL editor: alter table meowchive_votes add constraint uniq_vote
       unique (item_id, voter_id);)
       Enable Realtime for this table too.
-      Policies: SELECT using (true); INSERT with check (true);
-                UPDATE using (true) with check (true)
+      Policies: SELECT using (true)   -- public read of vote counts only.
+                Do NOT add public INSERT/UPDATE/DELETE policies — instead,
+                run this in the SQL Editor so all writes go through a
+                controlled function instead of raw table access:
+
+        create or replace function cast_vote(p_item_id text, p_vote text, p_voter_id text)
+        returns void language plpgsql security definer set search_path = public as $$
+        begin
+          if p_vote not in ('up','down') then raise exception 'invalid vote'; end if;
+          if p_item_id is null or p_voter_id is null or length(p_voter_id) < 5 then
+            raise exception 'invalid parameters';
+          end if;
+          insert into meowchive_votes (item_id, vote, voter_id)
+          values (p_item_id, p_vote, p_voter_id)
+          on conflict (item_id, voter_id)
+          do update set vote = excluded.vote, created_at = now();
+        end; $$;
+
+        create or replace function remove_vote(p_item_id text, p_voter_id text)
+        returns void language plpgsql security definer set search_path = public as $$
+        begin
+          delete from meowchive_votes where item_id = p_item_id and voter_id = p_voter_id;
+        end; $$;
+
+        grant execute on function cast_vote(text,text,text) to anon, authenticated;
+        grant execute on function remove_vote(text,text) to anon, authenticated;
+
+      This means: nobody can directly INSERT/UPDATE/DELETE rows in
+      meowchive_votes via the API anymore — the only door in is these two
+      functions, which validate the input themselves.
    9) Table editor > New table > "meowchive_suggestions":
         id (int8, primary key, identity), text (text),
         created_at (timestamptz, default now())
@@ -874,6 +909,8 @@ const I18N = {
     editItem: "✏️ Edit item",
     addNewItem: "➕ Add new item",
     cats: {
+      ai_intro: "Introducing AI",
+      all: "All",
       ai_image: "AI Image Gen",
       ai_video: "AI Video Gen",
       ai_code: "AI Coding",
@@ -939,6 +976,8 @@ const I18N = {
     editItem: "✏️ ویرایش مورد",
     addNewItem: "➕ مورد جدید",
     cats: {
+      ai_intro: "معرفی AI",
+      all: "همه",
       ai_image: "تولید تصویر AI",
       ai_video: "تولید ویدیو AI",
       ai_code: "کدنویسی AI",
@@ -1002,6 +1041,8 @@ const CAT_PAW_SVG = '<svg viewBox="0 0 64 64" fill="currentColor" xmlns="http://
 
 /* ---------------- categories ---------------- */
 const CATS = {
+  ai_intro:{ icon:'🧠' },
+  all:{ icon:'🗂️' },
   ai_image:{ icon:'🖼️', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
   ai_video:{ icon:'🎬', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
   ai_code:{ icon:'💻', subs:[{key:'free',cls:'free'},{key:'paid',cls:'paid'}] },
@@ -1011,12 +1052,13 @@ const CATS = {
   sites:{ icon:'🌐' },
   extensions:{ icon:'🧩' },
 };
-const CAT_ORDER = ['ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
+const CAT_ORDER = ['ai_intro','all','ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
+const ADDABLE_CATS = CAT_ORDER.filter(k=>k!=='all'); // "All" is just an aggregate view, not a real sheet to file new items under
 function hasSub(cat){ return !!(CATS[cat].subs && CATS[cat].subs.length); }
 function subsOf(cat){ return CATS[cat].subs || []; }
 
 let items = [];
-let currentCat = 'ai_image';
+let currentCat = 'ai_intro';
 let currentSub = 'free';
 let isAdmin = false;
 let appEntered = false;
@@ -1108,11 +1150,10 @@ async function castVote(itemId, val){
   const newVal = current.mine === val ? null : val; // clicking the same vote again removes it
   try{
     if(newVal === null){
-      const { error } = await sb.from('meowchive_votes').delete().eq('item_id', itemId).eq('voter_id', voterId);
+      const { error } = await sb.rpc('remove_vote', { p_item_id: itemId, p_voter_id: voterId });
       if(error) throw error;
     } else {
-      const { error } = await sb.from('meowchive_votes')
-        .upsert({ item_id: itemId, vote: newVal, voter_id: voterId }, { onConflict: 'item_id,voter_id' });
+      const { error } = await sb.rpc('cast_vote', { p_item_id: itemId, p_vote: newVal, p_voter_id: voterId });
       if(error) throw error;
     }
   }catch(e){
@@ -1422,7 +1463,7 @@ function buildTabs(){
     b.dataset.key = key;
     b.innerHTML = '<span class="tab-ico">'+CATS[key].icon+'</span> ' + tCat(key);
     b.className = key===currentCat ? 'active' : '';
-    b.onclick = ()=>{ currentCat=key; if(hasSub(key)) currentSub=subsOf(key)[0].key; document.getElementById('searchBox').value=''; render(); };
+    b.onclick = ()=>{ currentCat=key; if(hasSub(key)) currentSub=subsOf(key)[0].key; const sb=document.getElementById('searchBox'); sb.value=''; sb.classList.remove('expanded'); render(); };
     nav.appendChild(b);
   });
 }
@@ -1438,7 +1479,7 @@ function buildSubTabs(){
   });
 }
 function currentItems(){
-  let list = items.filter(it=>it.cat===currentCat);
+  let list = currentCat === 'all' ? items.slice() : items.filter(it=>it.cat===currentCat);
   if(hasSub(currentCat)) list = list.filter(it=>it.sub===currentSub);
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
   if(q) list = list.filter(it=>(it.title||'').toLowerCase().includes(q) || (it.note||'').toLowerCase().includes(q));
@@ -1512,6 +1553,7 @@ function render(){
     card.innerHTML = `
       ${badge}
       <h3>${escapeHtml(it.title)}</h3>
+      ${currentCat==='all' ? '<span class="sheet-tag">'+CATS[it.cat].icon+' '+tCat(it.cat)+'</span>' : ''}
       ${testedHtml}
       ${linksHtml}
       ${(()=>{
@@ -1578,6 +1620,23 @@ function debounce(fn, ms){
 }
 document.getElementById('sortSel').addEventListener('change', render);
 document.getElementById('searchBox').addEventListener('input', debounce(render, 180));
+document.getElementById('searchToggleBtn').addEventListener('click', ()=>{
+  const box = document.getElementById('searchBox');
+  const isOpen = box.classList.toggle('expanded');
+  if(isOpen){
+    box.focus();
+  } else if(box.value){
+    box.value = '';
+    render();
+  }
+});
+document.getElementById('searchBox').addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    e.target.value = '';
+    e.target.classList.remove('expanded');
+    render();
+  }
+});
 document.getElementById('addBtn').addEventListener('click', ()=> openModal(null));
 
 /* ---------------- add/edit modal ---------------- */
@@ -1593,7 +1652,7 @@ function openModal(id){
     <div class="modal">
       <h2>${existing ? t('editItem') : t('addNewItem')}</h2>
       <label>Sheet / بخش
-        <select id="f_cat">${CAT_ORDER.map(k=>`<option value="${k}" ${k===cat?'selected':''}>${CATS[k].icon} ${tCat(k)}</option>`).join('')}</select>
+        <select id="f_cat">${ADDABLE_CATS.map(k=>`<option value="${k}" ${k===cat?'selected':''}>${CATS[k].icon} ${tCat(k)}</option>`).join('')}</select>
       </label>
       <label id="f_sub_wrap" style="display:${catHasSub?'flex':'none'};">
         Subgroup
