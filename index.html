@@ -1052,7 +1052,7 @@ const CATS = {
   sites:{ icon:'🌐' },
   extensions:{ icon:'🧩' },
 };
-const CAT_ORDER = ['ai_intro','all','ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
+const CAT_ORDER = ['all','ai_intro','ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
 const ADDABLE_CATS = CAT_ORDER.filter(k=>k!=='all'); // "All" is just an aggregate view, not a real sheet to file new items under
 function hasSub(cat){ return !!(CATS[cat].subs && CATS[cat].subs.length); }
 function subsOf(cat){ return CATS[cat].subs || []; }
