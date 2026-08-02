@@ -1052,7 +1052,7 @@ const CATS = {
   sites:{ icon:'🌐' },
   extensions:{ icon:'🧩' },
 };
-const CAT_ORDER = ['all','ai_intro','ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
+const CAT_ORDER = ['ai_intro','all','ai_image','ai_video','ai_code','ai_other','prompts','tricks','sites','extensions'];
 const ADDABLE_CATS = CAT_ORDER.filter(k=>k!=='all'); // "All" is just an aggregate view, not a real sheet to file new items under
 function hasSub(cat){ return !!(CATS[cat].subs && CATS[cat].subs.length); }
 function subsOf(cat){ return CATS[cat].subs || []; }
@@ -1466,6 +1466,21 @@ function buildTabs(){
     b.onclick = ()=>{ currentCat=key; if(hasSub(key)) currentSub=subsOf(key)[0].key; const sb=document.getElementById('searchBox'); sb.value=''; sb.classList.remove('expanded'); render(); };
     nav.appendChild(b);
   });
+  fixTabScrollOnce();
+}
+let tabScrollFixed = false;
+function fixTabScrollOnce(){
+  // Browsers are inconsistent about initial horizontal-scroll position in
+  // RTL layouts, which can leave the first tab scrolled out of view even
+  // though it's correctly first in the markup. Force it into view — but
+  // only once, so we don't yank the tab bar back if someone deliberately
+  // scrolled it to see a later tab.
+  if(tabScrollFixed) return;
+  const nav = document.getElementById('mainTabs');
+  if(nav.firstElementChild){
+    nav.firstElementChild.scrollIntoView({ block:'nearest', inline:'start' });
+    tabScrollFixed = true;
+  }
 }
 function buildSubTabs(){
   const st = document.getElementById('subTabs');
@@ -1539,8 +1554,8 @@ function render(){
     if(promptList.length){
       promptHtml = '<div class="prompts-list">' + promptList.map((p,idx)=>`
         <div class="promptbox" data-id="${it.id}" data-idx="${idx}" title="Copy">
-          ${p.label ? '<div class="promptbox-label">'+escapeHtml(p.label)+'</div>' : ''}
-          <div class="promptbox-text">${escapeHtml(p.text)}</div>
+          ${p.label ? '<div class="promptbox-label" dir="auto">'+escapeHtml(p.label)+'</div>' : ''}
+          <div class="promptbox-text" dir="auto">${escapeHtml(p.text)}</div>
           <button class="copy-btn" data-id="${it.id}" data-idx="${idx}" title="Copy">📋</button>
         </div>`).join('') + '</div>';
     }
@@ -1552,14 +1567,14 @@ function render(){
       </div>`;
     card.innerHTML = `
       ${badge}
-      <h3>${escapeHtml(it.title)}</h3>
+      <h3 dir="auto">${escapeHtml(it.title)}</h3>
       ${currentCat==='all' ? '<span class="sheet-tag">'+CATS[it.cat].icon+' '+tCat(it.cat)+'</span>' : ''}
       ${testedHtml}
       ${linksHtml}
       ${(()=>{
         const nlist = (it.noteTexts && it.noteTexts.length) ? it.noteTexts : (it.note ? [{label:'',text:it.note}] : []);
         if(!nlist.length) return '';
-        return nlist.map(n=>'<p class="note">'+(n.label?'<strong>'+escapeHtml(n.label)+':</strong> ':'')+escapeHtml(n.text)+'</p>').join('');
+        return nlist.map(n=>'<p class="note" dir="auto">'+(n.label?'<strong>'+escapeHtml(n.label)+':</strong> ':'')+escapeHtml(n.text)+'</p>').join('');
       })()}
       ${imgHtml}
       ${promptHtml}
@@ -1659,7 +1674,7 @@ function openModal(id){
         <select id="f_sub">${subsOf(cat).map(s=>`<option value="${s.key}" ${existing && existing.sub===s.key?'selected':''}>${tSub(s.key)}</option>`).join('')}</select>
       </label>
       <label>${locale==='fa'?'عنوان':'Title'}
-        <input id="f_title" type="text" value="${existing ? escapeAttr(existing.title) : ''}" placeholder="e.g. Midjourney">
+        <input id="f_title" type="text" dir="auto" value="${existing ? escapeAttr(existing.title) : ''}" placeholder="e.g. Midjourney">
       </label>
       <label>${locale==='fa'?'لینک‌ها':'Links'}
         <div id="f_links_wrap" style="display:flex;flex-direction:column;gap:6px;"></div>
@@ -1753,7 +1768,7 @@ function openModal(id){
   function addPromptRow(label,text){
     if(promptsWrap.children.length >= MAX_PROMPTS) return;
     const row = document.createElement('div'); row.className='promptrow';
-    row.innerHTML = `<div style="display:flex;gap:6px;"><input type="text" class="prompt-label" placeholder="Label" value="${escapeAttr(label||'')}" style="flex:1;"><button type="button">✕</button></div><textarea class="prompt-text" rows="3" placeholder="Text">${escapeHtml(text||'')}</textarea>`;
+    row.innerHTML = `<div style="display:flex;gap:6px;"><input type="text" class="prompt-label" dir="auto" placeholder="Label" value="${escapeAttr(label||'')}" style="flex:1;"><button type="button">✕</button></div><textarea class="prompt-text" dir="auto" rows="3" placeholder="Text">${escapeHtml(text||'')}</textarea>`;
     row.querySelector('button').onclick = ()=>{ row.remove(); addPromptBtn.disabled = promptsWrap.children.length >= MAX_PROMPTS; };
     promptsWrap.appendChild(row); addPromptBtn.disabled = promptsWrap.children.length >= MAX_PROMPTS;
   }
@@ -1767,7 +1782,7 @@ function openModal(id){
   function addNoteRow(label,text){
     if(notesWrap.children.length >= MAX_NOTES) return;
     const row = document.createElement('div'); row.className='promptrow';
-    row.innerHTML = `<div style="display:flex;gap:6px;"><input type="text" class="note-label" placeholder="${locale==='fa'?'عنوان توضیح (اختیاری)':'Note label (optional)'}" value="${escapeAttr(label||'')}" style="flex:1;"><button type="button">✕</button></div><textarea class="note-text" rows="3" placeholder="${locale==='fa'?'متن توضیح':'Note text'}">${escapeHtml(text||'')}</textarea>`;
+    row.innerHTML = `<div style="display:flex;gap:6px;"><input type="text" class="note-label" dir="auto" placeholder="${locale==='fa'?'عنوان توضیح (اختیاری)':'Note label (optional)'}" value="${escapeAttr(label||'')}" style="flex:1;"><button type="button">✕</button></div><textarea class="note-text" dir="auto" rows="3" placeholder="${locale==='fa'?'متن توضیح':'Note text'}">${escapeHtml(text||'')}</textarea>`;
     row.querySelector('button').onclick = ()=>{ row.remove(); addNoteBtn.disabled = notesWrap.children.length >= MAX_NOTES; };
     notesWrap.appendChild(row); addNoteBtn.disabled = notesWrap.children.length >= MAX_NOTES;
   }
@@ -1832,7 +1847,7 @@ document.getElementById('suggestBtn').onclick = ()=>{
     <div class="modal">
       <h2>💡 ${locale==='fa' ? 'یه چیزی پیشنهاد بده' : 'Suggest something'}</h2>
       <label>${locale==='fa' ? 'یه ابزار، ترفند، یا هرچی که فکر می‌کنی باید اینجا باشه رو بنویس' : "A tool, trick, or anything you think belongs here"}
-        <textarea id="sugg_text" rows="5" placeholder="${locale==='fa' ? 'مثلاً: فلان سایت رو تست کن، یا فلان ترفند رو اضافه کن' : 'e.g. try this site, or add this trick'}"></textarea>
+        <textarea id="sugg_text" dir="auto" rows="5" placeholder="${locale==='fa' ? 'مثلاً: فلان سایت رو تست کن، یا فلان ترفند رو اضافه کن' : 'e.g. try this site, or add this trick'}"></textarea>
       </label>
       <div class="modal-actions">
         <button id="sugg_cancel">${locale==='fa' ? 'انصراف' : 'Cancel'}</button>
@@ -1887,7 +1902,7 @@ document.getElementById('inboxBtn').onclick = async ()=>{
   }
   list.innerHTML = rows.map(r=>`
     <div class="promptrow" data-row-id="${r.id}">
-      <div class="promptbox-text" style="white-space:pre-wrap;">${escapeHtml(r.text)}</div>
+      <div class="promptbox-text" dir="auto" style="white-space:pre-wrap;">${escapeHtml(r.text)}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="hint">${new Date(r.created_at).toLocaleString(locale==='fa'?'fa-IR':'en-US')}</span>
         <button class="del-suggestion" data-id="${r.id}">${locale==='fa' ? 'حذف' : 'Delete'}</button>
