@@ -533,7 +533,24 @@
   .card .badge.paid{ background:color-mix(in srgb,var(--amber) 15%,transparent); color:var(--amber); border:1px solid var(--amber); }
   .card .badge.neutral{ background:color-mix(in srgb,var(--accent) 15%,transparent); color:var(--accent); border:1px solid var(--accent); }
   .card h3{ margin:0; font-size:15.5px; color:var(--text); font-weight:700; }
-  .links-list{ display:flex; flex-direction:column; gap:3px; }
+  .card-toggle{ display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; }
+  .card-toggle h3{ flex:1; }
+  .card-toggle .chevron{ color:var(--text-dim); font-size:11px; flex-shrink:0; transition:color .15s; }
+  .card-toggle:hover .chevron{ color:var(--accent); }
+  .card-details{ display:flex; flex-direction:column; gap:9px; }
+  .links-list{ display:flex; flex-direction:column; gap:8px; }
+  .link-entry{ display:flex; flex-direction:column; gap:2px; }
+  .link-label{ font-size:11px; color:var(--accent); font-weight:700; }
+  .img-gallery{ display:flex; flex-wrap:wrap; gap:6px; }
+  .card .img-gallery img.sample{ width:calc(50% - 3px); flex:0 0 calc(50% - 3px); margin-top:0; max-height:130px; object-fit:cover; }
+  .related-row{ display:flex; flex-wrap:wrap; gap:6px; }
+  .related-chip{
+    background:#0d0d17; border:1px solid var(--line); color:var(--accent3); border-radius:999px;
+    padding:4px 10px; font-size:11.5px; cursor:pointer; font-family:inherit;
+  }
+  .related-chip:hover{ border-color:var(--accent3); }
+  @keyframes cardFlash{ 0%,100%{ box-shadow:none; } 30%,70%{ box-shadow:0 0 0 2px var(--accent), 0 0 24px rgba(178,107,255,.5); } }
+  .card.flash{ animation: cardFlash 1.4s ease; }
   .card a.link{ color:var(--accent3); font-size:12px; text-decoration:none; word-break:break-all; }
   .card a.link:hover{ text-decoration:underline; }
   .card p.note{ margin:0; font-size:13px; color:var(--text-dim); line-height:1.6; white-space:pre-wrap; }
@@ -1058,7 +1075,8 @@ function hasSub(cat){ return !!(CATS[cat].subs && CATS[cat].subs.length); }
 function subsOf(cat){ return CATS[cat].subs || []; }
 
 let items = [];
-let currentCat = 'ai_intro';
+let expandedIds = new Set(); // which cards are expanded (collapsed = title+image only)
+let currentCat = 'all';
 let currentSub = 'free';
 let isAdmin = false;
 let appEntered = false;
@@ -1541,12 +1559,27 @@ function render(){
       const cls=(s&&s.cls)?s.cls:'neutral';
       badge='<span class="badge '+cls+'">'+tSub(it.sub)+'</span>';
     }
-    let imgHtml = (it.image && isSafeImageSrc(it.image)) ? '<img class="sample" src="'+escapeAttr(it.image)+'" alt="preview" onerror="this.style.display=\'none\'">' : '';
-    const linkList = (it.links && it.links.length) ? it.links : (it.url ? [it.url] : []);
-    let linksHtml = linkList.length ? '<div class="links-list">'+linkList.map(l=> isSafeHref(l)
-      ? '<a class="link" href="'+escapeAttr(l)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(l)+'</a>'
-      : '<span class="link" style="opacity:.6;cursor:not-allowed" title="unsafe link blocked">'+escapeHtml(l)+'</span>'
-    ).join('')+'</div>' : '';
+    let imgHtml = '';
+    const imgList = (it.images && it.images.length) ? it.images : (it.image ? [it.image] : []);
+    if(imgList.length){
+      const safeImgs = imgList.filter(isSafeImageSrc);
+      if(safeImgs.length){
+        imgHtml = '<div class="img-gallery">' + safeImgs.map(src=>
+          '<img class="sample" src="'+escapeAttr(src)+'" alt="preview" onerror="this.style.display=\'none\'">'
+        ).join('') + '</div>';
+      }
+    }
+    const linkList = (it.links && it.links.length) ? it.links : (it.url ? [{label:'',url:it.url}] : []);
+    let linksHtml = linkList.length ? '<div class="links-list">'+linkList.map(l=>{
+      const url = typeof l === 'string' ? l : (l.url||'');
+      const label = typeof l === 'string' ? '' : (l.label||'');
+      if(!url) return '';
+      const labelHtml = label ? '<div class="link-label" dir="auto">'+escapeHtml(label)+'</div>' : '';
+      const linkEl = isSafeHref(url)
+        ? '<a class="link" href="'+escapeAttr(url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(url)+'</a>'
+        : '<span class="link" style="opacity:.6;cursor:not-allowed" title="unsafe link blocked">'+escapeHtml(url)+'</span>';
+      return '<div class="link-entry">'+labelHtml+linkEl+'</div>';
+    }).join('')+'</div>' : '';
     const tested = !!it.tested;
     const testedHtml = '<span class="tested-badge '+(tested?'tested':'untested')+'">'+(tested?t('tested'):t('untested'))+'</span>';
     let promptHtml='';
@@ -1559,33 +1592,66 @@ function render(){
           <button class="copy-btn" data-id="${it.id}" data-idx="${idx}" title="Copy">📋</button>
         </div>`).join('') + '</div>';
     }
+    let relatedHtml = '';
+    if(it.relatedIds && it.relatedIds.length){
+      const chips = it.relatedIds.map(rid=>{
+        const rit = items.find(x=>x.id===rid);
+        if(!rit) return '';
+        return '<button class="related-chip" data-jump="'+rid+'" dir="auto">🔗 '+escapeHtml(rit.title)+'</button>';
+      }).filter(Boolean).join('');
+      if(chips) relatedHtml = '<div class="related-row">'+chips+'</div>';
+    }
     const vt = votesByItem[it.id] || { up:0, down:0, mine:null };
     const voteHtml = `
       <div class="vote-row">
         <button class="vote-btn ${vt.mine==='up'?'on-up':''}" data-vote="up" data-id="${it.id}">👍 <span>${vt.up}</span></button>
         <button class="vote-btn ${vt.mine==='down'?'on-down':''}" data-vote="down" data-id="${it.id}">👎 <span>${vt.down}</span></button>
       </div>`;
+    card.dataset.itemId = it.id;
+    const isExpanded = expandedIds.has(it.id);
     card.innerHTML = `
-      ${badge}
-      <h3 dir="auto">${escapeHtml(it.title)}</h3>
-      ${currentCat==='all' ? '<span class="sheet-tag">'+CATS[it.cat].icon+' '+tCat(it.cat)+'</span>' : ''}
-      ${testedHtml}
-      ${linksHtml}
-      ${(()=>{
-        const nlist = (it.noteTexts && it.noteTexts.length) ? it.noteTexts : (it.note ? [{label:'',text:it.note}] : []);
-        if(!nlist.length) return '';
-        return nlist.map(n=>'<p class="note" dir="auto">'+(n.label?'<strong>'+escapeHtml(n.label)+':</strong> ':'')+escapeHtml(n.text)+'</p>').join('');
-      })()}
+      <div class="card-toggle" data-toggle="${it.id}">
+        <h3 dir="auto">${escapeHtml(it.title)}</h3>
+        <span class="chevron">${isExpanded ? '▲' : '▼'}</span>
+      </div>
       ${imgHtml}
-      ${promptHtml}
-      ${voteHtml}
-      <div class="card-footer">
-        ${starsHtml(it.rating||0, it.id)}
-        <div class="card-actions">
-          ${isAdmin ? `<button data-act="edit" data-id="${it.id}">${t('edit')}</button><button data-act="del" data-id="${it.id}">${t('del')}</button>` : ''}
+      <div class="card-details" style="display:${isExpanded ? 'flex' : 'none'};">
+        ${badge}
+        ${currentCat==='all' ? '<span class="sheet-tag">'+CATS[it.cat].icon+' '+tCat(it.cat)+'</span>' : ''}
+        ${testedHtml}
+        ${linksHtml}
+        ${(()=>{
+          const nlist = (it.noteTexts && it.noteTexts.length) ? it.noteTexts : (it.note ? [{label:'',text:it.note}] : []);
+          if(!nlist.length) return '';
+          return nlist.map(n=>'<p class="note" dir="auto">'+(n.label?'<strong>'+escapeHtml(n.label)+':</strong> ':'')+escapeHtml(n.text)+'</p>').join('');
+        })()}
+        ${promptHtml}
+        ${relatedHtml}
+        ${voteHtml}
+        <div class="card-footer">
+          ${starsHtml(it.rating||0, it.id)}
+          <div class="card-actions">
+            ${isAdmin ? `<button data-act="edit" data-id="${it.id}">${t('edit')}</button><button data-act="del" data-id="${it.id}">${t('del')}</button>` : ''}
+          </div>
         </div>
       </div>`;
     grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('.card-toggle').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const id = el.getAttribute('data-toggle');
+      const details = el.parentElement.querySelector('.card-details');
+      const chevron = el.querySelector('.chevron');
+      const nowExpanded = details.style.display === 'none';
+      details.style.display = nowExpanded ? 'flex' : 'none';
+      chevron.textContent = nowExpanded ? '▲' : '▼';
+      if(nowExpanded) expandedIds.add(id); else expandedIds.delete(id);
+    });
+  });
+
+  grid.querySelectorAll('.related-chip').forEach(el=>{
+    el.addEventListener('click', ()=> jumpToItem(el.getAttribute('data-jump')));
   });
 
   grid.querySelectorAll('.vote-btn').forEach(el=>{
@@ -1615,6 +1681,25 @@ function render(){
       };
     });
   }
+}
+
+function jumpToItem(id){
+  const target = items.find(x=>x.id===id);
+  if(!target) return;
+  currentCat = target.cat;
+  if(hasSub(target.cat)) currentSub = target.sub;
+  const sb = document.getElementById('searchBox');
+  sb.value = ''; sb.classList.remove('expanded');
+  expandedIds.add(id);
+  render();
+  requestAnimationFrame(()=>{
+    const el = document.querySelector('.card[data-item-id="'+id+'"]');
+    if(el){
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      el.classList.add('flash');
+      setTimeout(()=> el.classList.remove('flash'), 1500);
+    }
+  });
 }
 
 async function copyPrompt(id, idx){
@@ -1677,14 +1762,13 @@ function openModal(id){
         <input id="f_title" type="text" dir="auto" value="${existing ? escapeAttr(existing.title) : ''}" placeholder="e.g. Midjourney">
       </label>
       <label>${locale==='fa'?'لینک‌ها':'Links'}
-        <div id="f_links_wrap" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <div id="f_links_wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
         <button type="button" class="add-link-btn" id="f_add_link">+ Add link</button>
       </label>
       <label id="f_img_wrap">
-        ${locale==='fa'?'تصویر نمونه':'Sample image'}
-        <input id="f_image" type="text" value="${existing ? escapeAttr(existing.image||'') : ''}" placeholder="URL or upload">
-        <input id="f_image_file" type="file" accept="image/*" style="padding:4px;">
-        <img id="f_image_preview" src="${existing && existing.image ? escapeAttr(existing.image) : ''}" style="max-width:100%;max-height:140px;border-radius:8px;margin-top:4px;display:${existing && existing.image ? 'block':'none'};border:1px solid var(--line);">
+        ${locale==='fa'?'تصاویر':'Images'} <span class="hint">(max 5)</span>
+        <div id="f_images_wrap" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button type="button" class="add-link-btn" id="f_add_image">+ ${locale==='fa'?'افزودن تصویر':'Add image'}</button>
       </label>
       <label id="f_notes_wrap_label">${locale==='fa'?'توضیحات':'Notes'} <span class="hint">(max 10)</span>
         <div id="f_notes_wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1694,6 +1778,11 @@ function openModal(id){
         ${locale==='fa'?'متن‌های قابل کپی':'Copyable snippets'} <span class="hint">(max 10)</span>
         <div id="f_prompts_wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
         <button type="button" class="add-link-btn" id="f_add_prompt">+ Add snippet</button>
+      </label>
+      <label id="f_related_wrap">
+        ${locale==='fa'?'موارد مرتبط':'Related items'} <span class="hint">(max 5)</span>
+        <div id="f_related_rows" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <button type="button" class="add-link-btn" id="f_add_related">+ ${locale==='fa'?'افزودن مورد مرتبط':'Add related item'}</button>
       </label>
       <label>${locale==='fa'?'وضعیت تست':'Tested'}
         <div class="tested-toggle" id="f_tested">
@@ -1727,40 +1816,71 @@ function openModal(id){
     s.onclick = ()=>{ rateVal = parseInt(s.getAttribute('data-val')); rateWrap.querySelectorAll('span').forEach(x=>x.classList.toggle('on', parseInt(x.getAttribute('data-val'))<=rateVal)); };
   });
 
-  const imgUrlInput = overlay.querySelector('#f_image');
-  const imgPreview = overlay.querySelector('#f_image_preview');
-  const imgFileInput = overlay.querySelector('#f_image_file');
-  imgUrlInput.addEventListener('input', ()=>{ if(imgUrlInput.value.trim()){ imgPreview.src=imgUrlInput.value.trim(); imgPreview.style.display='block'; } else imgPreview.style.display='none'; });
-  imgFileInput.addEventListener('change', ()=>{
-    const file = imgFileInput.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ev=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const maxW=700, scale=Math.min(1, maxW/img.width);
-        const canvas=document.createElement('canvas'); canvas.width=img.width*scale; canvas.height=img.height*scale;
-        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
-        imgUrlInput.value=dataUrl; imgPreview.src=dataUrl; imgPreview.style.display='block';
+  const MAX_IMAGES = 5;
+  const imagesWrap = overlay.querySelector('#f_images_wrap');
+  const addImageBtn = overlay.querySelector('#f_add_image');
+  function addImageRow(value){
+    if(imagesWrap.children.length >= MAX_IMAGES) return;
+    const row = document.createElement('div');
+    row.className = 'promptrow';
+    row.innerHTML = `
+      <div style="display:flex;gap:6px;">
+        <input type="text" class="image-url" placeholder="URL ${locale==='fa'?'یا آپلود کن':'or upload below'}" value="${escapeAttr(value||'')}" style="flex:1;">
+        <button type="button">✕</button>
+      </div>
+      <input type="file" class="image-file" accept="image/*" style="padding:4px;">
+      <img class="image-preview" src="${value ? escapeAttr(value) : ''}" style="max-width:100%;max-height:120px;border-radius:8px;display:${value?'block':'none'};border:1px solid var(--line);">
+    `;
+    const urlInput = row.querySelector('.image-url');
+    const preview = row.querySelector('.image-preview');
+    const fileInput = row.querySelector('.image-file');
+    urlInput.addEventListener('input', ()=>{
+      if(urlInput.value.trim()){ preview.src = urlInput.value.trim(); preview.style.display = 'block'; }
+      else preview.style.display = 'none';
+    });
+    fileInput.addEventListener('change', ()=>{
+      const file = fileInput.files[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const maxW=700, scale=Math.min(1, maxW/img.width);
+          const canvas=document.createElement('canvas'); canvas.width=img.width*scale; canvas.height=img.height*scale;
+          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+          urlInput.value = dataUrl; preview.src = dataUrl; preview.style.display = 'block';
+        };
+        img.src = ev.target.result;
       };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
+      reader.readAsDataURL(file);
+    });
+    row.querySelector('button').onclick = ()=>{ row.remove(); addImageBtn.disabled = imagesWrap.children.length >= MAX_IMAGES; };
+    imagesWrap.appendChild(row);
+    addImageBtn.disabled = imagesWrap.children.length >= MAX_IMAGES;
+  }
+  const initialImages = existing ? (existing.images && existing.images.length ? existing.images : (existing.image ? [existing.image] : [])) : [];
+  if(initialImages.length){ initialImages.forEach(src=>addImageRow(src)); } else { addImageRow(''); }
+  addImageBtn.onclick = ()=> addImageRow('');
 
   const MAX_LINKS=10;
   const linksWrap = overlay.querySelector('#f_links_wrap');
   const addLinkBtn = overlay.querySelector('#f_add_link');
-  function addLinkRow(value){
+  function addLinkRow(label, url){
     if(linksWrap.children.length >= MAX_LINKS) return;
-    const row = document.createElement('div'); row.className='linkrow';
-    row.innerHTML = `<input type="text" class="link-input" placeholder="https://..." value="${escapeAttr(value||'')}"><button type="button">✕</button>`;
+    const row = document.createElement('div'); row.className='promptrow';
+    row.innerHTML = `
+      <div style="display:flex;gap:6px;">
+        <input type="text" class="link-label" dir="auto" placeholder="${locale==='fa'?'برچسب (مثلاً: گوگل)':'Label (e.g. Google)'}" value="${escapeAttr(label||'')}" style="flex:1;">
+        <button type="button">✕</button>
+      </div>
+      <input type="text" class="link-input" placeholder="https://..." value="${escapeAttr(url||'')}">
+    `;
     row.querySelector('button').onclick = ()=>{ row.remove(); addLinkBtn.disabled = linksWrap.children.length >= MAX_LINKS; };
     linksWrap.appendChild(row); addLinkBtn.disabled = linksWrap.children.length >= MAX_LINKS;
   }
-  const initialLinks = existing ? (existing.links && existing.links.length ? existing.links : (existing.url ? [existing.url] : [])) : [];
-  if(initialLinks.length){ initialLinks.forEach(l=>addLinkRow(l)); } else { addLinkRow(''); }
-  addLinkBtn.onclick = ()=> addLinkRow('');
+  const initialLinks = existing ? (existing.links && existing.links.length ? existing.links : (existing.url ? [{label:'',url:existing.url}] : [])) : [];
+  if(initialLinks.length){ initialLinks.forEach(l=> typeof l==='string' ? addLinkRow('', l) : addLinkRow(l.label, l.url)); } else { addLinkRow('',''); }
+  addLinkBtn.onclick = ()=> addLinkRow('','');
 
   const MAX_PROMPTS=10;
   const promptsWrap = overlay.querySelector('#f_prompts_wrap');
@@ -1793,6 +1913,30 @@ function openModal(id){
   if(initialNotes.length){ initialNotes.forEach(n=>addNoteRow(n.label,n.text)); } else { addNoteRow('',''); }
   addNoteBtn.onclick = ()=> addNoteRow('','');
 
+  const MAX_RELATED = 5;
+  const relatedWrap = overlay.querySelector('#f_related_rows');
+  const addRelatedBtn = overlay.querySelector('#f_add_related');
+  function otherItemOptions(selectedId){
+    return items
+      .filter(x=> x.id !== (existing ? existing.id : null))
+      .slice()
+      .sort((a,b)=> a.title.localeCompare(b.title, locale==='fa'?'fa':'en'))
+      .map(x=> `<option value="${x.id}" ${x.id===selectedId?'selected':''}>${CATS[x.cat].icon} ${escapeHtml(x.title)}</option>`)
+      .join('');
+  }
+  function addRelatedRow(selectedId){
+    if(relatedWrap.children.length >= MAX_RELATED) return;
+    const row = document.createElement('div');
+    row.className = 'linkrow';
+    row.innerHTML = `<select class="related-select" style="flex:1;"><option value="">${locale==='fa'?'— انتخاب کن —':'— choose —'}</option>${otherItemOptions(selectedId)}</select><button type="button">✕</button>`;
+    row.querySelector('button').onclick = ()=>{ row.remove(); addRelatedBtn.disabled = relatedWrap.children.length >= MAX_RELATED; };
+    relatedWrap.appendChild(row);
+    addRelatedBtn.disabled = relatedWrap.children.length >= MAX_RELATED;
+  }
+  const initialRelated = existing && existing.relatedIds ? existing.relatedIds.filter(rid=>items.some(x=>x.id===rid)) : [];
+  if(initialRelated.length){ initialRelated.forEach(rid=>addRelatedRow(rid)); } else { addRelatedRow(''); }
+  addRelatedBtn.onclick = ()=> addRelatedRow('');
+
   let testedVal = existing ? !!existing.tested : false;
   const testedWrap = overlay.querySelector('#f_tested');
   testedWrap.querySelectorAll('button').forEach(btn=>{
@@ -1814,15 +1958,22 @@ function openModal(id){
     const title = overlay.querySelector('#f_title').value.trim();
     if(!title){ showToast(t('needTitle')); return; }
     const c = catSel.value;
-    const rawLinks = Array.from(overlay.querySelectorAll('.link-input')).map(i=>i.value.trim()).filter(Boolean);
-    const links = rawLinks.filter(isSafeHref);
+    const rawLinks = Array.from(linksWrap.children).map(row=>({
+      label: row.querySelector('.link-label').value.trim(),
+      url: row.querySelector('.link-input').value.trim(),
+    })).filter(l=>l.url);
+    const links = rawLinks.filter(l=>isSafeHref(l.url));
     if(rawLinks.length !== links.length){ showToast(locale==='fa' ? 'یک یا چند لینک نامعتبر بود و حذف شد' : 'One or more links were invalid and were removed'); }
-    const rawImage = overlay.querySelector('#f_image').value.trim();
-    const safeImage = (!rawImage || isSafeImageSrc(rawImage)) ? rawImage : '';
+    const rawImages = Array.from(imagesWrap.children).map(row=>row.querySelector('.image-url').value.trim()).filter(Boolean);
+    const images = rawImages.filter(isSafeImageSrc);
+    if(rawImages.length !== images.length){ showToast(locale==='fa' ? 'یک یا چند تصویر نامعتبر بود و حذف شد' : 'One or more images were invalid and were removed'); }
     const promptTexts = Array.from(promptsWrap.children).map(row=>({ label: row.querySelector('.prompt-label').value.trim(), text: row.querySelector('.prompt-text').value.trim() })).filter(p=>p.text);
     const noteTexts = Array.from(notesWrap.children).map(row=>({ label: row.querySelector('.note-label').value.trim(), text: row.querySelector('.note-text').value.trim() })).filter(n=>n.text);
     const noteJoined = noteTexts.map(n=>n.label? (n.label+': '+n.text):n.text).join('\n\n');
-    const payload = { cat:c, sub: hasSub(c) ? overlay.querySelector('#f_sub').value : undefined, title, links, image: safeImage, note: noteJoined, noteTexts, promptTexts, tested: testedVal, rating: rateVal };
+    const relatedIds = Array.from(relatedWrap.querySelectorAll('.related-select'))
+      .map(sel=>sel.value).filter(Boolean)
+      .filter((v,i,arr)=>arr.indexOf(v)===i); // de-dupe
+    const payload = { cat:c, sub: hasSub(c) ? overlay.querySelector('#f_sub').value : undefined, title, links, images, note: noteJoined, noteTexts, promptTexts, relatedIds, tested: testedVal, rating: rateVal };
     const saveBtn = overlay.querySelector('#f_save');
     saveBtn.textContent = '...'; saveBtn.disabled = true;
     const backup = existing ? Object.assign({}, existing) : null;
